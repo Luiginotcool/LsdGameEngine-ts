@@ -6,41 +6,76 @@ export class Game {
         this.cam = new Camera(2, 0, -5, 0, 0);
         this.render = render;
         let scene = new Scene();
-        let gobj = new GameObject();
-        gobj.mesh = Mesh.cube();
-        scene.addGameObject(gobj);
         this.sceneArray = [scene];
-        console.log("Dims, ", this.render.width, this.render.height);
+        this.cubes = [];
+        for (let i = 0; i < 3000; i++) {
+            let randomVec = Vec3.random(new Vec3(15, 0, 15), new Vec3(0, 0, 0));
+            console.log(randomVec);
+            let newCube = new GameObject();
+            newCube.mesh = Mesh.cube().translate(randomVec);
+            this.cubes.push(newCube);
+        }
     }
     static loop(dt) {
-        this.handleInput();
+        this.handleInput(dt);
         let render = this.render;
-        let scene = this.sceneArray[0];
-        let cam = this.cam;
-        let buffers = render.initBuffers(scene);
-        render.drawScene(render.programInfo, buffers, cam);
+        this.cubes.forEach((cube, i) => {
+            let newCube = new GameObject();
+            if (cube.mesh === null) {
+                return;
+            }
+            newCube.mesh = cube.mesh.translate(new Vec3(0, Math.sin(Game.frames / (100000 / i) + (i * 12426 % Math.PI * 2)) * 5, 0));
+            this.sceneArray[0].gameObjectArray[i] = newCube;
+        });
+        let buffers = render.initBuffers(this.sceneArray[0]);
+        if (buffers === null) {
+            alert("Buffers are null");
+            return;
+        }
+        render.drawScene(render.programInfo, buffers, this.cam);
     }
-    static handleInput() {
+    static handleInput(dt) {
         let sensitivity = 0.001;
-        let speed = 0.1;
+        let speed = 0.01 * dt;
         // Update camera rotation based on mouse movement
-        this.cam.heading = (Input.mouseX - this.render.width / 2) * sensitivity;
-        this.cam.pitch = (-Input.mouseY + this.render.height / 2) * sensitivity;
-        // Calculate direction vectors
-        let forward = new Vec3(Math.sin(this.cam.heading), Math.sin(this.cam.pitch), Math.cos(this.cam.heading)).normalize();
-        let right = new Vec3(Math.cos(this.cam.heading), 0, Math.sin(this.cam.heading)).normalize();
-        // Movement controls
+        if (this.mouseLocked) {
+            if (Input.mouseX) {
+                this.cam.heading += Input.mouseDx * sensitivity;
+                this.cam.pitch -= Input.mouseDy * sensitivity;
+                if (Math.abs(this.cam.pitch) > Math.PI / 2) {
+                    this.cam.pitch = Math.sign(this.cam.pitch) * Math.PI / 2;
+                }
+                Input.mouseX = 0;
+                Input.mouseY = 0;
+            }
+            else {
+                Input.mouseX = 0;
+            }
+        }
+        // Calculate forward direction
+        let vx = speed * -Math.sin(this.cam.heading);
+        let vz = speed * Math.cos(this.cam.heading);
         if (Input.keys.up) {
-            this.cam.pos = this.cam.pos.add(forward.scale(speed));
+            this.cam.pos.x -= vx;
+            this.cam.pos.z += vz;
         }
         if (Input.keys.down) {
-            this.cam.pos = this.cam.pos.subtract(forward.scale(speed));
+            this.cam.pos.x += vx;
+            this.cam.pos.z -= vz;
         }
         if (Input.keys.left) {
-            this.cam.pos = this.cam.pos.subtract(right.scale(speed));
+            this.cam.pos.x -= vz;
+            this.cam.pos.z -= vx;
         }
         if (Input.keys.right) {
-            this.cam.pos = this.cam.pos.add(right.scale(speed));
+            this.cam.pos.x += vz;
+            this.cam.pos.z += vx;
+        }
+        if (Input.keys.space) {
+            this.cam.pos.y += speed;
+        }
+        if (Input.keys.shift) {
+            this.cam.pos.y -= speed;
         }
     }
 }

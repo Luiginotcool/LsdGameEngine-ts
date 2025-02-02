@@ -1,4 +1,4 @@
-import { Camera, Scene } from "./engine.js";
+import { Camera, GameObject, Scene } from "./engine.js";
 import { Mat4, Vec3 } from "./math.js";
 
 export class Render {
@@ -109,6 +109,9 @@ export class Render {
     createProgram(vertexShader: WebGLShader, fragmentShader: WebGLShader): WebGLProgram | null {
         let gl = this.gl;
         let program = gl.createProgram();
+        if (program === null) {
+            return null;
+        }
         gl.attachShader(program, vertexShader);
         gl.attachShader(program, fragmentShader);
         gl.linkProgram(program);
@@ -129,7 +132,7 @@ export class Render {
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
     
-        let cubeRotation = 0.5
+        let cubeRotation = 0.0
     
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
@@ -141,20 +144,20 @@ export class Render {
     
         let modelViewMatrix = new Mat4();
 
+
+        let rightVector = (new Vec3(-1, 0, 0)).rotateAroundAxis([0, 1, 0], camera.heading);
+        let forward = new Vec3(
+            Math.sin(camera.heading),
+            0,
+            Math.cos(camera.heading),
+        ).rotateAroundAxis(rightVector, camera.pitch);
+        let target = camera.pos.add(forward);
+        let upVector = (new Vec3(0, 1, 0)).rotateAroundAxis(rightVector, camera.pitch)
         let viewMatrix = new Mat4();
-        viewMatrix.identity();
-        
-        // Move the world in the opposite direction of the camera position
-        viewMatrix.multiply(new Mat4().translate([-camera.pos.x, -camera.pos.y, camera.pos.z]));
-        
-        // Apply inverse pitch (rotate world around camera's local right axis)
-        let rightVector = new Mat4().rotate(camera.heading, [0, 1, 0]).transformVector(new Vec3(-1, 0, 0));
-        viewMatrix.multiply(new Mat4().rotate(-camera.pitch, rightVector));
-        
-        // Apply inverse heading (rotate world around the Y-axis)
-        viewMatrix.multiply(new Mat4().rotate(-camera.heading, [0, 1, 0]));
-        viewMatrix.multiply(new Mat4().rotate(-camera.pitch, [0, 1, 0]));
-        
+        viewMatrix = Mat4.lookAt(
+            [-camera.pos.x, camera.pos.y, camera.pos.z],
+            [-target.x, target.y, target.z], 
+            [-upVector.x, upVector.y, upVector.z])
 
 
         
@@ -164,13 +167,13 @@ export class Render {
         modelViewMatrix.multiply(new Mat4().rotate(cubeRotation, [0, 0, 1]));
         
         // Rotate around the Y axis
-        modelViewMatrix.multiply(new Mat4().rotate(-0.9, [0, 1, 0]));
+        modelViewMatrix.multiply(new Mat4().rotate(cubeRotation, [0, 1, 0]));
         
         // Rotate around the X axis
         modelViewMatrix.multiply(new Mat4().rotate(cubeRotation * 0.1, [1, 0, 0]));
         
         // Translate after rotation
-        modelViewMatrix.multiply(new Mat4().translate([0.0, 0.0, -5.0]));
+        //modelViewMatrix.multiply(new Mat4().translate([0.0, 0.0, -5.0]));
 
         modelViewMatrix.multiply(viewMatrix);
 
@@ -198,7 +201,7 @@ export class Render {
             let type = gl.UNSIGNED_SHORT;
             let offset = 0;
             gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-            console.log(vertexCount)
+            //console.log(vertexCount)
         }
 
     }
@@ -241,11 +244,17 @@ export class Render {
         gl.enableVertexAttribArray(programInfo.attribLocations.vertexColour);
     }
 
-    initBuffers(scene = new Scene()) {
+    initBuffers(scene = new Scene()): Buffers | null {
         let gl = this.gl;
         let positionBuffer = this.initPositionBuffer(scene);
         let colourBuffer = this.initColourBuffer(scene);
         let indexBuffer = this.initIndexBuffer(scene);
+        if (positionBuffer === null || 
+            colourBuffer === null ||
+            indexBuffer === null
+        ) {
+            return null;
+        }
         return {
             position: positionBuffer,
             colour: colourBuffer,
@@ -260,10 +269,11 @@ export class Render {
         let positions: number[] = []
         scene.gameObjectArray.forEach((gameObject) => {
             if (gameObject.mesh != null) {
-                positions = positions.concat(...gameObject.mesh.vertexArray);
+                //console.log("GO mesh", gameObject.mesh)
+                gameObject.mesh.vertexArray.forEach((v)=>{positions.push(v)})
             }
         })
-        console.log("Positions", positions)
+        //console.log("Positions", positions)
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
         return positionBuffer;
     }
@@ -277,12 +287,12 @@ export class Render {
         scene.gameObjectArray.forEach((gameObject) => {
             if (gameObject.mesh != null) {
                 gameObject.mesh.indexArray.forEach((index) => {
-                    indices = indices.concat(index);
+                    indices.push(index + indexOffset);
                 })
-                indexOffset += gameObject.mesh.vertexArray.length;
+                indexOffset += gameObject.mesh.vertexArray.length / 3;
             }
         })
-        console.log("indices", indices)
+        //console.log("indices", indices)
     
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
         return indexBuffer;
@@ -290,30 +300,20 @@ export class Render {
 
     initColourBuffer(scene: Scene) {
         let gl = this.gl;
-        const faceColors = [
-            [1.0, 1.0, 1.0, 1.0], // Front face: white
-            [1.0, 0.0, 0.0, 1.0], // Back face: red
-            [0.0, 1.0, 0.0, 1.0], // Top face: green
-            [0.0, 0.0, 1.0, 1.0], // Bottom face: blue
-            [1.0, 1.0, 0.0, 1.0], // Right face: yellow
-            [1.0, 0.0, 1.0, 1.0], // Left face: purple
-          ];
-        
-          // Convert the array of colors into a table for all the vertices.
-        
-          var colors: any = [];
-        
-          for (var j = 0; j < faceColors.length; ++j) {
-            const c = faceColors[j];
-            // Repeat each color four times for the four vertices of the face
-            colors = colors.concat(c, c, c, c);
-          }
-        
-          const colorBuffer = gl.createBuffer();
-          gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-        
-          return colorBuffer;
+        let colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    
+        let faceColours: number[] = [];
+        scene.gameObjectArray.forEach((gameObject) => {
+            if (gameObject.hasMesh()) {
+                gameObject.mesh!.faceColourArray.forEach((fc) => {faceColours.push(fc)})
+                //console.log("facec", gameObject.mesh!.faceColourArray);
+            }
+        });
+
+    
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(faceColours), gl.STATIC_DRAW);
+        return colorBuffer;
     }
 
 }

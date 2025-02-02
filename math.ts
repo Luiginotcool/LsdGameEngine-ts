@@ -123,11 +123,11 @@ export class Mat4 {
         let m = this.data; // Assuming `this.m` is a flat 4x4 column-major array
         let x = vec.x, y = vec.x, z = vec.z;
     
-        return [
-            x * m[0] + y * m[4] + z * m[8],  // New X
-            x * m[1] + y * m[5] + z * m[9],  // New Y
-            x * m[2] + y * m[6] + z * m[10]  // New Z
-        ];
+        return new Vec3(
+            x * m[0] + y * m[1] + z * m[2],  // New X
+            x * m[4] + y * m[5] + z * m[6],  // New Y
+            x * m[8] + y * m[9] + z * m[10]  // New Z
+        );
     };
 }
 
@@ -159,30 +159,68 @@ export class Vec3 {
         return new Vec3(0, 0, 0); // Prevent divide by zero
     }
 
-    rotateX(angle: number): Vec3 {
-        const rad = angle * Math.PI / 180;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-        const y = this.y * cos - this.z * sin;
-        const z = this.y * sin + this.z * cos;
-        return new Vec3(this.x, y, z);
+    static random(range: Vec3, offset: Vec3) {
+        let randomVec = new Vec3(Math.random()*range.x, Math.random()*range.y, Math.random()*range.z).add(offset).subtract(range.scale(1/2));
+        return randomVec;
     }
 
-    rotateY(angle: number): Vec3 {
-        const rad = angle * Math.PI / 180;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-        const x = this.x * cos + this.z * sin;
-        const z = -this.x * sin + this.z * cos;
-        return new Vec3(x, this.y, z);
-    }
+    
 
-    rotateZ(angle: number): Vec3 {
-        const rad = angle * Math.PI / 180;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-        const x = this.x * cos - this.y * sin;
-        const y = this.x * sin + this.y * cos;
-        return new Vec3(x, y, this.z);
+    rotateAroundAxis(axis: Vec3 | number[], angle: number): Vec3 {
+        // Angle in radians
+        let ax: number, ay: number, az: number;
+
+        // Check if the axis is a Vec3 or an array
+        if (axis instanceof Vec3) {
+            ax = axis.x;
+            ay = axis.y;
+            az = axis.z;
+        } else if (Array.isArray(axis)) {
+            if (axis.length !== 3) {
+                throw new Error("Axis array must have exactly 3 elements [x, y, z].");
+            }
+            [ax, ay, az] = axis;
+        } else {
+            throw new Error("Axis must be either a Vec3 or a number array.");
+        }
+
+        // Normalize the axis vector
+        const length = Math.sqrt(ax * ax + ay * ay + az * az);
+        if (length === 0) {
+            throw new Error("Axis vector cannot be zero.");
+        }
+        ax /= length;
+        ay /= length;
+        az /= length;
+
+        // Convert angle to radians
+        const theta = angle
+
+        const cosTheta = Math.cos(theta);
+        const sinTheta = Math.sin(theta);
+
+        // Dot product of the vector and the axis
+        const dotProduct = this.x * ax + this.y * ay + this.z * az;
+
+        // Apply Rodrigues' rotation formula
+        const x =
+            this.x * cosTheta +
+            (ay * this.z - az * this.y) * sinTheta +
+            ax * dotProduct * (1 - cosTheta);
+
+        const y =
+            this.y * cosTheta +
+            (az * this.x - ax * this.z) * sinTheta +
+            ay * dotProduct * (1 - cosTheta);
+
+        const z =
+            this.z * cosTheta +
+            (ax * this.y - ay * this.x) * sinTheta +
+            az * dotProduct * (1 - cosTheta);
+
+        return new Vec3(x, y, z);
+    }
+    toArray() {
+        return [this.x, this.y, this.z]
     }
 }

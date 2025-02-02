@@ -15,3 +15,7 @@ type Buffers = {
     colour: WebGLBuffer,
     indices: WebGLBuffer
 }
+
+type DebugText = {
+    [heading: string] : string | number
+}

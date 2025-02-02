@@ -11,12 +11,6 @@ export class Camera {
         this.heading = heading
         this.pitch = pitch;
     }
-
-    headingVector() {
-        let camDir = new Vec3(0, 0, 1);
-        camDir = camDir.rotateY(this.heading);
-        return camDir;
-    }
 }
 
 
@@ -36,6 +30,10 @@ export class GameObject {
     constructor() {
         this.mesh = null;
     }
+
+    hasMesh() {
+        return this.mesh !== null;
+    }
 }
 
 export class Mesh {
@@ -45,14 +43,30 @@ export class Mesh {
     constructor(vertexArray: number[] = [], indexArray: number[] = [], faceColourArray: number[] = []) {
         this.vertexArray = vertexArray;
         this.indexArray = indexArray;
-        if (faceColourArray.length < indexArray.length / 3) {
-            console.log("Filling faceColourArray", faceColourArray);
-            for (let i = faceColourArray.length*3; i <= indexArray.length; i+=3) {
-                faceColourArray.push(Math.random(), Math.random(), Math.random(), 1.0);
+        //console.log("Filling arrays", faceColourArray.length, 4 * indexArray.length / 3,  4 * indexArray.length / 3 - faceColourArray.length)
+        let numFaces = indexArray.length / 3;
+        if (faceColourArray.length < 4 * numFaces) {
+            for (let i = 0; i <= 4 * numFaces; i+=3) {
+                let c = [Math.random(), Math.random(), Math.random(), 1.0];
+                faceColourArray = faceColourArray.concat(c, c, c, c);
             }
         }
-        console.log(faceColourArray)
         this.faceColourArray = faceColourArray;
+    }
+
+    translate(vec: Vec3): Mesh {
+        let newVA: number[] = []
+        this.vertexArray.forEach((v, i) => {
+            let t = 0;
+            switch (i%3) {
+                case 0: {t = vec.x; break}
+                case 1: {t = vec.y; break}
+                case 2: {t = vec.z; break}
+            }
+            newVA.push(v + t)
+        })
+        let out = new Mesh(newVA, this.indexArray, this.faceColourArray);
+        return out;
     }
 
     static cube() {
@@ -76,52 +90,20 @@ export class Mesh {
             -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0,
           ];
         let indexArray = [
-            0,
-            1,
-            2,
-            0,
-            2,
-            3, // front
-            4,
-            5,
-            6,
-            4,
-            6,
-            7, // back
-            8,
-            9,
-            10,
-            8,
-            10,
-            11, // top
-            12,
-            13,
-            14,
-            12,
-            14,
-            15, // bottom
-            16,
-            17,
-            18,
-            16,
-            18,
-            19, // right
-            20,
-            21,
-            22,
-            20,
-            22,
-            23, // left
+            0, 1, 2, 0, 2, 3, // front
+            4, 5, 6, 4, 6, 7, // back
+            8, 9, 10, 8, 10, 11, // top
+            12, 13, 14, 12, 14, 15, // bottom
+            16, 17, 18, 16, 18, 19, // right
+            20, 21, 22, 20, 22, 23, // left
           ];
-        let faceColourArray = [
-            [1.0, 1.0, 1.0, 1.0], // Front face: white
-            [1.0, 0.0, 0.0, 1.0], // Back face: red
-            [0.0, 1.0, 0.0, 1.0], // Top face: green
-            [0.0, 0.0, 1.0, 1.0], // Bottom face: blue
-            [1.0, 1.0, 0.0, 1.0], // Right face: yellow
-            [1.0, 0.0, 1.0, 1.0], // Left face: purple
-          ];
-        let mesh = new Mesh(vertexArray, indexArray);
+        let faceColourArray: number[] = [];
+        for (let i = 0; i < 6; i++) {
+            let c = [Math.random(), Math.random(), Math.random(), 1.0]
+            faceColourArray = faceColourArray.concat(c, c, c, c)
+        }
+        //console.log("AAA", faceColourArray)
+        let mesh = new Mesh(vertexArray, indexArray, faceColourArray);
         return mesh;
     }
 }
