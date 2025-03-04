@@ -42,6 +42,9 @@ export class Render {
             },
         };
         console.log(this.programInfo);
+        this.gl.viewport(0, 0, width, height);
+        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        this.gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
     initShaderProgram(vsSource, fsSource) {
         let gl = this.gl;
@@ -104,6 +107,57 @@ export class Render {
         gl.deleteProgram(program);
         return null;
     }
+    clear(r, g, b, a) {
+        let gl = this.gl;
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clearDepth(1.0);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    }
+    createProjectionMatrix(camera, zNear, zFar) {
+        let fov = (camera.fov * Math.PI) / 180;
+        let aspect = this.width / this.height;
+        let projectionMatrix = Mat4.perspective(fov, aspect, zNear, zFar);
+        return projectionMatrix;
+    }
+    createModelViewMatrix(camera, gameObject) {
+        let modelViewMatrix = new Mat4();
+        let scaleMatrix = new Mat4();
+        let rotationMatrix = new Mat4();
+        let translationMatrix = new Mat4();
+        if (gameObject.hasTransform()) {
+            let s = gameObject.transform.scale;
+            let r = gameObject.transform.rotate;
+            let p = gameObject.transform.pos;
+            scaleMatrix.data.set([
+                s.x, 0, 0, 0,
+                0, s.y, 0, 0,
+                0, 0, s.z, 0,
+                0, 0, 0, 1
+            ]);
+            rotationMatrix.rotate(r.x, [1, 0, 0]);
+            rotationMatrix.rotate(r.y, [0, 1, 0]);
+            rotationMatrix.rotate(r.z, [0, 0, 1]);
+            translationMatrix.data.set([
+                1, 0, 0, p.x,
+                0, 1, 0, p.y,
+                0, 0, 1, p.z,
+                0, 0, 0, 0
+            ]);
+            modelViewMatrix.multiply(scaleMatrix);
+            modelViewMatrix.multiply(rotationMatrix);
+            modelViewMatrix.multiply(translationMatrix);
+        }
+        let rightVector = (new Vec3(-1, 0, 0)).rotateAroundAxis([0, 1, 0], camera.heading);
+        let forward = new Vec3(Math.sin(camera.heading), 0, Math.cos(camera.heading)).rotateAroundAxis(rightVector, camera.pitch);
+        let target = camera.pos.add(forward);
+        let upVector = (new Vec3(0, 1, 0)).rotateAroundAxis(rightVector, camera.pitch);
+        let viewMatrix = new Mat4();
+        viewMatrix = Mat4.lookAt([-camera.pos.x, camera.pos.y, camera.pos.z], [-target.x, target.y, target.z], [-upVector.x, upVector.y, upVector.z]);
+        modelViewMatrix.multiply(viewMatrix);
+        return modelViewMatrix;
+    }
     drawScene(programInfo, buffers, camera) {
         let gl = this.gl;
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -111,7 +165,7 @@ export class Render {
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
         let cubeRotation = 0.0;
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         let fov = (45 * Math.PI) / 180;
         let aspect = this.width / this.height;
         let zNear = 0.1;
@@ -147,6 +201,99 @@ export class Render {
             gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
             //console.log(vertexCount)
         }
+    }
+    drawScene2(programInfo, scene, camera) {
+        // Clear screen
+        // For each mesh in the scene's game objects:
+        //      Create the buffers for the game object
+        //      Create Model View Matrix
+        //      Render Mesh
+        //
+        let zNear = 0.1;
+        let zFar = 100;
+        let gl = this.gl;
+        this.clear(0, 0, 0, 1);
+        console.log("This is drawScene2");
+        scene.gameObjectArray.forEach(gameObject => {
+            if (gameObject.hasMesh()) {
+                let mesh = gameObject.mesh;
+                let buffers = this.initBuffers2(gameObject);
+                if (buffers == null) {
+                    return;
+                }
+                let projectionMatrix = this.createProjectionMatrix(camera, zNear, zFar);
+                let modelViewMatrix = this.createModelViewMatrix(camera, gameObject);
+                this.setColourAttribute(programInfo, buffers);
+                this.setPositionAttribute(programInfo, buffers);
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+                gl.useProgram(programInfo.program);
+                gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix.data);
+                gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix.data);
+                {
+                    let vertexCount = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE) / 2;
+                    let type = gl.UNSIGNED_SHORT;
+                    let offset = 0;
+                    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+                    //console.log(vertexCount)
+                }
+            }
+        });
+    }
+    initBuffers2(gameObject) {
+        let gl = this.gl;
+        let positionBuffer = this.initPositionBuffer2(gameObject);
+        let colourBuffer = this.initColourBuffer2(gameObject);
+        let indexBuffer = this.initIndexBuffer2(gameObject);
+        if (positionBuffer === null ||
+            colourBuffer === null ||
+            indexBuffer === null) {
+            return null;
+        }
+        return {
+            position: positionBuffer,
+            colour: colourBuffer,
+            indices: indexBuffer,
+        };
+    }
+    initPositionBuffer2(gameObject) {
+        let gl = this.gl;
+        let positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        let positions = [];
+        if (gameObject.hasMesh()) {
+            //console.log("GO mesh", gameObject.mesh)
+            gameObject.mesh.vertexArray.forEach((v) => { positions.push(v); });
+        }
+        //console.log("Positions", positions)
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        return positionBuffer;
+    }
+    initColourBuffer2(gameObject) {
+        let gl = this.gl;
+        let colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        let faceColours = [];
+        if (gameObject.hasMesh()) {
+            gameObject.mesh.faceColourArray.forEach((fc) => { faceColours.push(fc); });
+        }
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(faceColours), gl.STATIC_DRAW);
+        return colorBuffer;
+    }
+    initIndexBuffer2(gameObject) {
+        let gl = this.gl;
+        let indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        let indices = [];
+        let indexOffset = 0;
+        if (gameObject.hasMesh()) {
+            gameObject.mesh.indexArray.forEach((index) => {
+                indices.push(index + indexOffset);
+            });
+            indexOffset += gameObject.mesh.vertexArray.length / 3;
+        }
+        //console.log("indices", indices)
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+        return indexBuffer;
     }
     setPositionAttribute(programInfo, buffers) {
         let gl = this.gl;

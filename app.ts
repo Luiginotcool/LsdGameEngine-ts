@@ -12,6 +12,7 @@ class App {
     static render: Render;
     static noLoop: boolean;
     static dt: number;
+    static dtArray: number[];
     private static oldTimeStamp: DOMHighResTimeStamp;
     static frames: number;
 
@@ -24,14 +25,12 @@ class App {
         App.canvas.width = App.width
         App.canvas.height = App.height;
         App.frames = 0;
+        App.dtArray = Array(30).fill(1);
         let overlay = document.getElementById("overlay");
         if (overlay !== null) {
             this.overlay = overlay as HTMLDivElement;
         }
-        this.gl.viewport(0, 0, App.width, App.height);
-        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        // Clear the color buffer with specified clear color
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
         this.render = new Render(this.gl, App.width, App.height);
         console.log("Done")
 
@@ -69,7 +68,7 @@ class App {
         let gobj = new GameObject();
         gobj.mesh = Mesh.cube()
         scene.addGameObject(gobj);
-        let cam = new Camera(0,0, -5, 0.9, 0.5);
+        let cam = new Camera(0,0, -5, 0.9, 0.5, 45);
 
 
         let buffers = render.initBuffers(scene);
@@ -86,6 +85,10 @@ class App {
             window.requestAnimationFrame(App.gameLoop);
         } else {
             App.dt = (timeStamp - App.oldTimeStamp);
+            App.dtArray.push(Number.isNaN(App.dt) ? 1 : App.dt);
+            App.dtArray.shift();
+            let dtAvg = 0;
+            App.dtArray.forEach(dt => {dtAvg += dt / App.dtArray.length;});
             App.oldTimeStamp = timeStamp;
             let fps = Math.round(1000 / (App.dt < 1000/60 ? 1000/60: App.dt));
             
@@ -93,9 +96,10 @@ class App {
             Game.loop(App.dt);
             App.frames++;
             Game.frames = App.frames;
-            
+
             let debugString = {
                 "Fps": fps,
+                "dt avg.": `${Math.trunc(dtAvg)}ms`,
                 "x": Game.cam.pos.x,
                 "y": Game.cam.pos.y,
                 "z": Game.cam.pos.z,

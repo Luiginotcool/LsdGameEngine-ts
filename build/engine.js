@@ -2,10 +2,11 @@ import { Vec3 } from "./math.js";
 export class Engine {
 }
 export class Camera {
-    constructor(x, y, z, heading, pitch) {
+    constructor(x, y, z, heading, pitch, fov) {
         this.pos = new Vec3(x, y, z);
         this.heading = heading;
         this.pitch = pitch;
+        this.fov = fov;
     }
 }
 export class Scene {
@@ -19,9 +20,20 @@ export class Scene {
 export class GameObject {
     constructor() {
         this.mesh = null;
+        this.transform = null;
     }
     hasMesh() {
         return this.mesh !== null;
+    }
+    hasTransform() {
+        return this.transform !== null;
+    }
+}
+export class Transform {
+    constructor() {
+        this.pos = new Vec3();
+        this.scale = new Vec3(1, 1, 1);
+        this.rotate = new Vec3();
     }
 }
 export class Mesh {

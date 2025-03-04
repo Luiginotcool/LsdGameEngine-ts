@@ -12,13 +12,14 @@ export class Game {
     static cubes: GameObject[]
 
     static init(render: Render) {
-        this.cam = new Camera(2, 0, -5, 0, 0);
+        this.cam = new Camera(2, 0, -5, 0, 0, 45);
         this.render = render;
         let scene = new Scene();
-        this.sceneArray = [scene];
+        let scene2 = new Scene();
+        this.sceneArray = [scene, scene2];
         this.cubes = [];
-        for (let i = 0; i < 3000; i++) {
-            let randomVec = Vec3.random(new Vec3(15, 0, 15), new Vec3(0, 0, 0));
+        for (let i = 0; i < 1; i++) {
+            let randomVec = Vec3.random(new Vec3(10, 0, 10), new Vec3(0, 0, 0));
             console.log(randomVec)
             let newCube = new GameObject();
             newCube.mesh = Mesh.cube().translate(randomVec);
@@ -29,9 +30,6 @@ export class Game {
     static loop(dt: number) {
         this.handleInput(dt);
         let render = this.render
-
-
-
 
         this.cubes.forEach((cube, i) => {
             let newCube = new GameObject();
@@ -49,6 +47,13 @@ export class Game {
             return;
         }
         render.drawScene(render.programInfo, buffers, this.cam);
+        buffers = render.initBuffers(this.sceneArray[1]);
+        if (buffers === null) {
+            alert("Buffers are null");
+            return;
+        }
+        //render.drawScene(render.programInfo, buffers, this.cam);
+        render.drawScene2(render.programInfo, this.sceneArray[0], this.cam);
         
     }
 

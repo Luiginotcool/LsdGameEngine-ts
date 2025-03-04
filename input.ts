@@ -54,7 +54,7 @@ export class Input {
             case 0: this.leftMouse = to; break;
             // right mouse
             case 2: this.rightMouse = to; break;
-        }
+        } 
     }
 
     static setMousePos(x: number, y:number, dx: number, dy: number) {

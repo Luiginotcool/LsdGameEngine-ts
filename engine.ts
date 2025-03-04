@@ -6,10 +6,12 @@ export class Camera {
     pos: Vec3
     heading: number;
     pitch: number;
-    constructor(x: number,y:number,z:number, heading:number, pitch:number) {
+    fov: number
+    constructor(x: number,y:number,z:number, heading:number, pitch:number, fov:number) {
         this.pos = new Vec3(x,y,z);
         this.heading = heading
         this.pitch = pitch;
+        this.fov = fov;
     }
 }
 
@@ -27,12 +29,29 @@ export class Scene {
 
 export class GameObject {
     mesh: Mesh | null
+    transform: Transform | null
     constructor() {
         this.mesh = null;
+        this.transform = null;
     }
 
     hasMesh() {
         return this.mesh !== null;
+    }
+
+    hasTransform() {
+        return this.transform !== null;
+    }
+}
+
+export class Transform {
+    pos: Vec3
+    scale: Vec3
+    rotate: Vec3
+    constructor() {
+        this.pos = new Vec3();
+        this.scale = new Vec3(1, 1, 1);
+        this.rotate = new Vec3();
     }
 }
 
