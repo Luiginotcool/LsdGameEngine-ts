@@ -69,7 +69,7 @@ class App {
         gobj.mesh = Mesh.cube()
         scene.addGameObject(gobj);
         let cam = new Camera(0,0, -5, 0.9, 0.5, 45);
-        render.drawScene(render.programInfo, scene, cam);
+        render.drawScene(scene, cam);
 
     }
 
@@ -93,11 +93,11 @@ class App {
             let debugString = {
                 "Fps": fps,
                 "dt avg.": `${Math.trunc(dtAvg)}ms`,
-                "x": Game.cam.pos.x,
-                "y": Game.cam.pos.y,
-                "z": Game.cam.pos.z,
-                "heading": Game.cam.heading,
-                "pitch": Game.cam.pitch,
+                "x": Game.globals.cam.pos.x,
+                "y": Game.globals.cam.pos.y,
+                "z": Game.globals.cam.pos.z,
+                "heading": Game.globals.cam.heading,
+                "pitch": Game.globals.cam.pitch,
             }
             App.displayDebug(debugString)
     

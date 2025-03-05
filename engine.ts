@@ -84,6 +84,18 @@ export class Transform {
         this.scale = new Vec3(1, 1, 1);
         this.rotate = new Vec3();
     }
+
+    set(pos: Vec3 = Vec3.zero(), scale: Vec3 = Vec3.one(), rotate: Vec3 = Vec3.zero()) {
+        this.pos = pos;
+        if (scale.has(0)) {
+            scale = Vec3.one();
+            console.log("Scale has a zero!")
+        }
+        this.scale = scale;
+        this.rotate = rotate;
+
+        return this;
+    }
 }
 
 export class Mesh {
@@ -123,22 +135,22 @@ export class Mesh {
     static cube() {
         let vertexArray =  [
             // Front face
-            -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
+            -1.0, -1.0, 1.0,    1.0, -1.0, 1.0,     1.0, 1.0, 1.0,      -1.0, 1.0, 1.0,
           
             // Back face
-            -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0,
+            -1.0, -1.0, -1.0,   -1.0, 1.0, -1.0,    1.0, 1.0, -1.0,     1.0, -1.0, -1.0,
           
             // Top face
-            -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0,
+            -1.0, 1.0, -1.0,    -1.0, 1.0, 1.0,     1.0, 1.0, 1.0,      1.0, 1.0, -1.0,
           
             // Bottom face
-            -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
+            -1.0, -1.0, -1.0,   1.0, -1.0, -1.0,    1.0, -1.0, 1.0,     -1.0, -1.0, 1.0,
           
             // Right face
-            1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0,
+            1.0, -1.0, -1.0,    1.0, 1.0, -1.0,     1.0, 1.0, 1.0,      1.0, -1.0, 1.0,
           
             // Left face
-            -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0,
+            -1.0, -1.0, -1.0,   -1.0, -1.0, 1.0,    -1.0, 1.0, 1.0,     -1.0, 1.0, -1.0,
           ];
         let indexArray = [
             0, 1, 2, 0, 2, 3, // front
@@ -152,8 +164,30 @@ export class Mesh {
         for (let i = 0; i < 6; i++) {
             let c = [Math.random(), Math.random(), Math.random(), 1.0]
             faceColourArray = faceColourArray.concat(c, c, c, c)
+            /*
+            c1 c1 c1 c1     r g b a  r g b a  r g b a  r g b a 
+            c2 c2 c2 c2
+                ...
+            c6 c6 c6 c6
+            */
         }
         //console.log("AAA", faceColourArray)
+        let mesh = new Mesh(vertexArray, indexArray, faceColourArray);
+        return mesh;
+    }
+
+    static plane() {
+        let vertexArray = [
+            -1.2, 0.0, -1.2,
+            1.2, 0.0, -1.2,
+            1.2, 0.0, 1.2,
+            -1.2, 0.0, 1.2
+        ]
+        let indexArray = [
+            0, 1, 2, 0, 2, 3
+        ];
+        let c = [Math.random(), Math.random(), Math.random(), 1.0]
+        let faceColourArray: number[] = Array().concat(c, c, c, c);
         let mesh = new Mesh(vertexArray, indexArray, faceColourArray);
         return mesh;
     }

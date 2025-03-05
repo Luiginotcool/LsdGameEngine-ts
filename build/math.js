@@ -155,6 +155,15 @@ ${m[8]} ${m[9]} ${m[10]} ${m[11]}
 ${m[12]} ${m[13]} ${m[14]} ${m[15]}`;
         return s;
     }
+    asObject() {
+        let m = this.data;
+        return {
+            1: [m[0], m[1], m[2], m[3]].join(", "),
+            2: [m[4], m[5], m[6], m[7]].join(", "),
+            3: [m[8], m[9], m[10], m[11]].join(", "),
+            4: [m[12], m[13], m[14], m[15]].join(", ")
+        };
+    }
 }
 export class Vec3 {
     constructor(x = 0, y = 0, z = 0) {
@@ -185,6 +194,12 @@ export class Vec3 {
     static random(range, offset) {
         let randomVec = new Vec3(Math.random() * range.x, Math.random() * range.y, Math.random() * range.z).add(offset).subtract(range.scale(1 / 2));
         return randomVec;
+    }
+    static zero() {
+        return new Vec3(0, 0, 0);
+    }
+    static one() {
+        return new Vec3(1, 1, 1);
     }
     rotateAroundAxis(axis, angle) {
         // Angle in radians
@@ -232,5 +247,10 @@ export class Vec3 {
     }
     toArray() {
         return [this.x, this.y, this.z];
+    }
+    has(n) {
+        return (this.x == n ||
+            this.y == n ||
+            this.z == n);
     }
 }

@@ -29,9 +29,12 @@ export class Render {
 
     private gl: WebGLRenderingContext;
     public programInfo: ProgramInfo;
+    private isInit: boolean;
+    public debug: boolean;
 
     constructor(gl: WebGLRenderingContext, public width: number, public height: number) {
         this.gl = gl;
+        this.debug = true;
         let shaderProgram = this.initShaderProgram(this.vsSource, this.fsSource);
 
         if (shaderProgram === null) {
@@ -54,6 +57,7 @@ export class Render {
         this.gl.viewport(0, 0, width, height);
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        this.isInit = true;
     }
 
     initShaderProgram(vsSource: string, fsSource: string) {
@@ -267,11 +271,17 @@ export class Render {
     }
 
     
-    drawScene(programInfo: ProgramInfo, scene: Scene, camera: Camera) {
+    drawScene(scene: Scene, camera: Camera) {
         // Clear screen
         // Create the buffers for the scene
         // Create the view matrix
         // Render scene
+
+        if (!this.isInit) {
+            return;
+        }
+
+        let programInfo = this.programInfo;
 
         let zNear = 0.1;
         let zFar = 100;
@@ -281,6 +291,10 @@ export class Render {
             vertexCount += gameObject.hasMesh() ? gameObject.mesh!.indexArray.length : 0;
         })
 
+
+
+
+
         this.clear(0, 0, 0, 1);
         //console.log("This is drawScene3", programInfo.attribLocations.modelMatrix)
 
@@ -288,6 +302,12 @@ export class Render {
         if (buffers === null) {
             return;
         }
+
+        if (this.debug) {
+            console.log("vertexCount", vertexCount);
+            console.log("buffers", buffers);
+        }
+
         let projectionMatrix = this.createProjectionMatrix(camera, zNear, zFar);
         let viewMatrix = this.createViewMatrix(camera);
         this.setColourAttribute(programInfo, buffers);
@@ -361,10 +381,16 @@ export class Render {
                 gameObject.mesh.vertexArray.forEach((v)=>{positions.push(v)})
             }
         })
-        //console.log("Positions", positions)
+
+        if (this.debug) {
+            console.log("Positions", positions)
+            console.log("number of positions", positions.length / 3);
+
+        }
+
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
         
-        return positionBuffer;
+        return positionBuffer
     }
 
     initIndexBuffer(scene: Scene) {
@@ -381,8 +407,13 @@ export class Render {
                 indexOffset += gameObject.mesh.vertexArray.length / 3;
             }
         })
-        //console.log("indices", indices)
-    
+        if (this.debug) {
+            console.log("indices", indices)
+            console.log("indicies length", indices.length);
+
+        }
+
+
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
         return indexBuffer;
     }
@@ -400,6 +431,10 @@ export class Render {
             }
         });
 
+        if (this.debug) {
+
+        }
+
     
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(faceColours), gl.STATIC_DRAW);
         return colorBuffer;
@@ -414,11 +449,28 @@ export class Render {
         scene.gameObjectArray.forEach((gameObject => {
             //modelMatrixArray.push(this.createModelMatrix(gameObject));
             let mm = this.createModelMatrix(gameObject)
+
             if (gameObject.hasMesh()) {
-                gameObject.mesh!.vertexArray.forEach((v) => {modelMatrixArray.push(mm)})
+                let numPositions = gameObject.mesh!.vertexArray.length / 3;
+                if (this.debug) {
+                    console.log("model matrix", mm.asObject());
+                    console.log("number of positions", numPositions);
+                }
+                for (let i = 0; i < numPositions; i++) {
+                    modelMatrixArray.push(mm)
+                }
             }
         }))
-        //console.log("model matrix array", modelMatrixArray.toString())
+
+
+        if (this.debug) {
+            console.log("model matrix array", modelMatrixArray.map((mmArr) => {return mmArr.asObject()}))
+            console.log("model matrix length: ", modelMatrixArray.length)
+            console.log("game object array", scene.gameObjectArray)
+
+        }
+
+
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(Mat4.flattenMat4Array(modelMatrixArray)), gl.STATIC_DRAW);
         return modelMatrixBuffer;
     }

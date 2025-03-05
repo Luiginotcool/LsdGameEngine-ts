@@ -25,3 +25,7 @@ type DebugText = {
 type keyFunctions = {
     [key: string] : Function
 }
+
+type Globals = {
+    [key: string] : any
+}
