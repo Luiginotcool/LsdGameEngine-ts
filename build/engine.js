@@ -20,13 +20,34 @@ export class Scene {
 export class GameObject {
     constructor() {
         this.mesh = null;
-        this.transform = null;
+        this.transform = new Transform();
+        this.controller = null;
+    }
+    update(dt) {
+        if (this.hasController()) {
+        }
+    }
+    hasController() {
+        return this.controller !== null;
     }
     hasMesh() {
         return this.mesh !== null;
     }
     hasTransform() {
         return this.transform !== null;
+    }
+}
+export class Controller {
+    constructor(gameObject) {
+        this.keys = {};
+        this.gameObject = gameObject;
+    }
+    static player(gameObject) {
+        let c = new Controller(gameObject);
+        c.keys["w"] = function (dt) {
+            let sensitivity = 0.001;
+            let speed = 0.01 * dt;
+        };
     }
 }
 export class Transform {

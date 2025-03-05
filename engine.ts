@@ -1,3 +1,4 @@
+import { Game } from "./game.js";
 import { Vec3 } from "./math.js";
 
 export class Engine{}
@@ -29,10 +30,22 @@ export class Scene {
 
 export class GameObject {
     mesh: Mesh | null
-    transform: Transform | null
+    transform: Transform
+    controller: Controller | null
     constructor() {
         this.mesh = null;
-        this.transform = null;
+        this.transform = new Transform();
+        this.controller = null;
+    }
+
+    update(dt: number) {
+        if (this.hasController()) {
+
+        }
+    }
+
+    hasController() {
+        return this.controller !== null;
     }
 
     hasMesh() {
@@ -41,6 +54,24 @@ export class GameObject {
 
     hasTransform() {
         return this.transform !== null;
+    }
+}
+
+export class Controller {
+    keys: keyFunctions
+    gameObject: GameObject
+    constructor(gameObject: GameObject) {
+        this.keys = {}
+        this.gameObject = gameObject;
+    }
+
+    static player(gameObject: GameObject) {
+        let c = new Controller(gameObject);
+        
+        c.keys["w"] = function(dt: number) {
+            let sensitivity = 0.001;
+            let speed = 0.01 * dt;
+        }
     }
 }
 
@@ -87,6 +118,7 @@ export class Mesh {
         let out = new Mesh(newVA, this.indexArray, this.faceColourArray);
         return out;
     }
+
 
     static cube() {
         let vertexArray =  [

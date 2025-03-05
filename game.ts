@@ -1,4 +1,4 @@
-import { Camera, GameObject, Mesh, Scene } from "./engine.js";
+import { Camera, Controller, GameObject, Mesh, Scene, Transform } from "./engine.js";
 import { Input } from "./input.js";
 import { Vec3 } from "./math.js";
 import { Render } from "./render.js";
@@ -10,19 +10,24 @@ export class Game {
     static mouseLocked: boolean;
     static frames: number;
     static cubes: GameObject[]
+    static player: GameObject;
 
     static init(render: Render) {
         this.cam = new Camera(2, 0, -5, 0, 0, 45);
+        this.player = new GameObject();
+        this.player.controller = new Controller(this.player);
         this.render = render;
         let scene = new Scene();
         let scene2 = new Scene();
         this.sceneArray = [scene, scene2];
         this.cubes = [];
-        for (let i = 0; i < 1; i++) {
-            let randomVec = Vec3.random(new Vec3(10, 0, 10), new Vec3(0, 0, 0));
-            console.log(randomVec)
+        for (let i = 0; i < 100; i++) {
+            let randomVec = Vec3.random(new Vec3(10, 10, 10), new Vec3(0, 0, 0));
+            //console.log(randomVec)
             let newCube = new GameObject();
-            newCube.mesh = Mesh.cube().translate(randomVec);
+            newCube.mesh = Mesh.cube()//.translate(randomVec);
+            newCube.transform = new Transform();
+            newCube.transform.pos = randomVec;
             this.cubes.push(newCube);
         }
     }
@@ -32,28 +37,11 @@ export class Game {
         let render = this.render
 
         this.cubes.forEach((cube, i) => {
-            let newCube = new GameObject();
-            if (cube.mesh === null) {return;}
-            newCube.mesh = cube.mesh.translate(new Vec3(0, Math.sin(Game.frames / (100000/i) + (i*12426 % Math.PI*2)) * 5, 0));
-            this.sceneArray[0].gameObjectArray[i] = newCube;
+            //cube.transform!.pos = new Vec3(this.frames / 300, 0, this.frames / 500)
+            cube.transform!.rotate = new Vec3(this.frames / (cube.transform!.pos.x * 100), 0, this.frames / (cube.transform!.pos.x * 200))
+            this.sceneArray[0].gameObjectArray = this.cubes;
         })
-
-        
-
-
-        let buffers = render.initBuffers(this.sceneArray[0]);
-        if (buffers === null) {
-            alert("Buffers are null");
-            return;
-        }
-        render.drawScene(render.programInfo, buffers, this.cam);
-        buffers = render.initBuffers(this.sceneArray[1]);
-        if (buffers === null) {
-            alert("Buffers are null");
-            return;
-        }
-        //render.drawScene(render.programInfo, buffers, this.cam);
-        render.drawScene2(render.programInfo, this.sceneArray[0], this.cam);
+        render.drawScene(render.programInfo, this.sceneArray[0], this.cam);
         
     }
 
