@@ -52,12 +52,7 @@ class App {
         gobj.mesh = Mesh.cube();
         scene.addGameObject(gobj);
         let cam = new Camera(0, 0, -5, 0.9, 0.5, 45);
-        let buffers = render.initBuffers(scene);
-        if (buffers === null) {
-            alert("Buffers is null");
-            return;
-        }
-        render.drawScene(render.programInfo, buffers, cam);
+        render.drawScene(render.programInfo, scene, cam);
     }
     static gameLoop(timeStamp) {
         if (App.noLoop) {

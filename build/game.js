@@ -1,9 +1,11 @@
-import { Camera, GameObject, Mesh, Scene, Transform } from "./engine.js";
+import { Camera, Controller, GameObject, Mesh, Scene, Transform } from "./engine.js";
 import { Input } from "./input.js";
 import { Vec3 } from "./math.js";
 export class Game {
     static init(render) {
         this.cam = new Camera(2, 0, -5, 0, 0, 45);
+        this.player = new GameObject();
+        this.player.controller = new Controller(this.player);
         this.render = render;
         let scene = new Scene();
         let scene2 = new Scene();
