@@ -3,6 +3,7 @@ type ProgramInfo = {
     attribLocations: {
         vertexPosition: number;
         vertexColour: number;
+        modelMatrix: number;
     };
     uniformLocations: {
         projectionMatrix: WebGLUniformLocation | null;
@@ -13,9 +14,18 @@ type ProgramInfo = {
 type Buffers = {
     position: WebGLBuffer,
     colour: WebGLBuffer,
-    indices: WebGLBuffer
+    indices: WebGLBuffer,
+    modelMatrix: WebGLBuffer,
 }
 
 type DebugText = {
     [heading: string] : string | number
+}
+
+type keyFunctions = {
+    [key: string] : Function
+}
+
+type Globals = {
+    [key: string] : any
 }

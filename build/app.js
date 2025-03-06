@@ -12,14 +12,11 @@ class App {
         App.canvas.width = App.width;
         App.canvas.height = App.height;
         App.frames = 0;
+        App.dtArray = Array(30).fill(1);
         let overlay = document.getElementById("overlay");
         if (overlay !== null) {
             this.overlay = overlay;
         }
-        this.gl.viewport(0, 0, App.width, App.height);
-        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        // Clear the color buffer with specified clear color
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         this.render = new Render(this.gl, App.width, App.height);
         console.log("Done");
         App.canvas.onclick = function () {
@@ -54,13 +51,8 @@ class App {
         let gobj = new GameObject();
         gobj.mesh = Mesh.cube();
         scene.addGameObject(gobj);
-        let cam = new Camera(0, 0, -5, 0.9, 0.5);
-        let buffers = render.initBuffers(scene);
-        if (buffers === null) {
-            alert("Buffers is null");
-            return;
-        }
-        render.drawScene(render.programInfo, buffers, cam);
+        let cam = new Camera(0, 0, -5, 0.9, 0.5, 45);
+        render.drawScene(scene, cam);
     }
     static gameLoop(timeStamp) {
         if (App.noLoop) {
@@ -68,19 +60,25 @@ class App {
         }
         else {
             App.dt = (timeStamp - App.oldTimeStamp);
+            App.dtArray.push(Number.isNaN(App.dt) ? 1 : App.dt);
+            App.dtArray.shift();
+            let dtAvg = 0;
+            App.dtArray.forEach(dt => { dtAvg += dt / App.dtArray.length; });
             App.oldTimeStamp = timeStamp;
             let fps = Math.round(1000 / (App.dt < 1000 / 60 ? 1000 / 60 : App.dt));
-            Game.mouseLocked = (document.pointerLockElement === App.canvas);
+            Input.mouseLocked = (document.pointerLockElement === App.canvas);
             Game.loop(App.dt);
             App.frames++;
             Game.frames = App.frames;
             let debugString = {
                 "Fps": fps,
-                "x": Game.cam.pos.x,
-                "y": Game.cam.pos.y,
-                "z": Game.cam.pos.z,
-                "heading": Game.cam.heading,
-                "pitch": Game.cam.pitch,
+                "dt avg.": `${Math.trunc(dtAvg)}ms`,
+                "x": Game.globals.player.transform.pos.x,
+                "y": Game.globals.player.transform.pos.y,
+                "z": Game.globals.player.transform.pos.z,
+                //"bbox": `${Game.globals.box.collider.pos.toArray().map((n: number)=>{return Math.trunc(n*10)/10}).toString()}`,
+                "heading": Game.globals.player.camera.heading,
+                "pitch": Game.globals.player.camera.pitch,
             };
             App.displayDebug(debugString);
             App.noLoop = false;

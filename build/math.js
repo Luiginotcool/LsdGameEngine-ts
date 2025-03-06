@@ -3,6 +3,15 @@ export class Mat4 {
         this.data = new Float32Array(16);
         this.identity();
     }
+    equals(mat) {
+        let e = true;
+        this.data.forEach((d, i) => {
+            if (d != mat.data[i]) {
+                e = false;
+            }
+        });
+        return e;
+    }
     identity() {
         this.data.set([
             1, 0, 0, 0,
@@ -107,6 +116,54 @@ export class Mat4 {
         );
     }
     ;
+    static flattenMat4Array(matrices) {
+        let flatArray = new Float32Array(matrices.length * 16);
+        for (let i = 0; i < matrices.length; i++) {
+            flatArray.set(matrices[i].data, i * 16);
+        }
+        return flatArray;
+    }
+    transpose() {
+        const m = this.data;
+        // Swap elements to transpose the matrix
+        const temp = m[1];
+        m[1] = m[4];
+        m[4] = temp;
+        const temp2 = m[2];
+        m[2] = m[8];
+        m[8] = temp2;
+        const temp3 = m[3];
+        m[3] = m[12];
+        m[12] = temp3;
+        const temp4 = m[6];
+        m[6] = m[9];
+        m[9] = temp4;
+        const temp5 = m[7];
+        m[7] = m[13];
+        m[13] = temp5;
+        const temp6 = m[11];
+        m[11] = m[14];
+        m[14] = temp6;
+        return this; // For chaining
+    }
+    toString() {
+        let m = this.data;
+        let s = `
+${m[0] + 0} ${m[1]} ${m[2]} ${m[3]}
+${m[4]} ${m[5]} ${m[6]} ${m[7]}
+${m[8]} ${m[9]} ${m[10]} ${m[11]}
+${m[12]} ${m[13]} ${m[14]} ${m[15]}`;
+        return s;
+    }
+    asObject() {
+        let m = this.data;
+        return {
+            1: [m[0], m[1], m[2], m[3]].join(", "),
+            2: [m[4], m[5], m[6], m[7]].join(", "),
+            3: [m[8], m[9], m[10], m[11]].join(", "),
+            4: [m[12], m[13], m[14], m[15]].join(", ")
+        };
+    }
 }
 export class Vec3 {
     constructor(x = 0, y = 0, z = 0) {
@@ -137,6 +194,12 @@ export class Vec3 {
     static random(range, offset) {
         let randomVec = new Vec3(Math.random() * range.x, Math.random() * range.y, Math.random() * range.z).add(offset).subtract(range.scale(1 / 2));
         return randomVec;
+    }
+    static zero() {
+        return new Vec3(0, 0, 0);
+    }
+    static one() {
+        return new Vec3(1, 1, 1);
     }
     rotateAroundAxis(axis, angle) {
         // Angle in radians
@@ -184,5 +247,10 @@ export class Vec3 {
     }
     toArray() {
         return [this.x, this.y, this.z];
+    }
+    has(n) {
+        return (this.x == n ||
+            this.y == n ||
+            this.z == n);
     }
 }
