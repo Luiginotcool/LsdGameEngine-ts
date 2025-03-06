@@ -14,6 +14,7 @@ export class Input {
     static mouseDy: number;
     static leftMouse: boolean;
     static rightMouse: boolean;
+    static mouseLocked: boolean;
 
     static init(): void {
         document.addEventListener('keydown', function(e) { Input.changeKey(e.key, 1)});
@@ -21,6 +22,7 @@ export class Input {
         document.addEventListener("mousemove", function(e) { Input.setMousePos(e.clientX, e.clientY, e.movementX, e.movementY)});
         document.addEventListener("mousedown", function(e) {Input.changeMouseDown(e.button, true)});
         document.addEventListener("mouseup", function(e) {Input.changeMouseDown(e.button, false)});
+        
         Input.mouseDx = 0;
         Input.mouseDy = 0;
     }

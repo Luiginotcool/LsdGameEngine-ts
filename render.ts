@@ -252,7 +252,9 @@ export class Render {
         return modelMatrix.transpose();
     }
 
-    createViewMatrix(camera: Camera) {
+    createViewMatrix(camera_: Camera) {
+        let p = camera_.pos;
+        let camera = new Camera(-p.x, p.y, p.z, camera_.heading + Math.PI, camera_.pitch, camera_.fov)
         let rightVector = (new Vec3(-1, 0, 0)).rotateAroundAxis([0, 1, 0], camera.heading);
         let forward = new Vec3(
             Math.sin(camera.heading),
@@ -260,6 +262,7 @@ export class Render {
             Math.cos(camera.heading),
         ).rotateAroundAxis(rightVector, camera.pitch);
         let target = camera.pos.add(forward);
+        //target.x = target.x - 2*camera.pos.x
         let upVector = (new Vec3(0, 1, 0)).rotateAroundAxis(rightVector, camera.pitch)
         let viewMatrix = new Mat4();
         viewMatrix = Mat4.lookAt(
@@ -270,8 +273,10 @@ export class Render {
         return viewMatrix;
     }
 
+
+
     
-    drawScene(scene: Scene, camera: Camera) {
+    drawScene(scene: Scene, camera: Camera, wireframe: boolean = false) {
         // Clear screen
         // Create the buffers for the scene
         // Create the view matrix
@@ -294,8 +299,10 @@ export class Render {
 
 
 
+        if (!wireframe) {
+            this.clear(0, 0, 0, 1);
+        }
 
-        this.clear(0, 0, 0, 1);
         //console.log("This is drawScene3", programInfo.attribLocations.modelMatrix)
 
         let buffers = this.initBuffers(scene);
@@ -343,7 +350,13 @@ export class Render {
         {
             let type = gl.UNSIGNED_SHORT;
             let offset = 0;
-            gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+            if (wireframe) {
+                gl.drawElements(gl.LINE_STRIP, vertexCount, type, offset)
+            }
+            else {
+                gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+
+            }
             //console.log(vertexCount)
         }
     }

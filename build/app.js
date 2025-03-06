@@ -66,18 +66,19 @@ class App {
             App.dtArray.forEach(dt => { dtAvg += dt / App.dtArray.length; });
             App.oldTimeStamp = timeStamp;
             let fps = Math.round(1000 / (App.dt < 1000 / 60 ? 1000 / 60 : App.dt));
-            Game.mouseLocked = (document.pointerLockElement === App.canvas);
+            Input.mouseLocked = (document.pointerLockElement === App.canvas);
             Game.loop(App.dt);
             App.frames++;
             Game.frames = App.frames;
             let debugString = {
                 "Fps": fps,
                 "dt avg.": `${Math.trunc(dtAvg)}ms`,
-                "x": Game.globals.cam.pos.x,
-                "y": Game.globals.cam.pos.y,
-                "z": Game.globals.cam.pos.z,
-                "heading": Game.globals.cam.heading,
-                "pitch": Game.globals.cam.pitch,
+                "x": Game.globals.player.transform.pos.x,
+                "y": Game.globals.player.transform.pos.y,
+                "z": Game.globals.player.transform.pos.z,
+                //"bbox": `${Game.globals.box.collider.pos.toArray().map((n: number)=>{return Math.trunc(n*10)/10}).toString()}`,
+                "heading": Game.globals.player.camera.heading,
+                "pitch": Game.globals.player.camera.pitch,
             };
             App.displayDebug(debugString);
             App.noLoop = false;

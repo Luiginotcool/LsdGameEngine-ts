@@ -1,4 +1,5 @@
 import { Vec3 } from "./math.js";
+import { Input } from "./input.js";
 export class Engine {
 }
 export class Camera {
@@ -22,9 +23,15 @@ export class GameObject {
         this.mesh = null;
         this.transform = new Transform();
         this.controller = null;
+        this.camera = null;
+        this.body = null;
     }
     update(dt) {
         if (this.hasController()) {
+        }
+        if (this.hasBody()) {
+            this.body.update(dt);
+            this.transform.pos = this.body.pos;
         }
     }
     hasController() {
@@ -35,6 +42,134 @@ export class GameObject {
     }
     hasTransform() {
         return this.transform !== null;
+    }
+    hasBody() {
+        return this.body !== null;
+    }
+    handleInput(dt) {
+        let sensitivity = 0.001;
+        let speed = 0.01 * dt;
+        let cam = this.camera;
+        let pos = this.transform.pos;
+        if (cam == null || pos == null) {
+            return;
+        }
+        // Update camera rotation based on mouse movement
+        if (Input.mouseLocked) {
+            if (Input.mouseX) {
+                cam.heading += Input.mouseDx * sensitivity;
+                cam.pitch -= Input.mouseDy * sensitivity;
+                if (Math.abs(cam.pitch) > Math.PI / 2) {
+                    cam.pitch = Math.sign(cam.pitch) * Math.PI / 2;
+                }
+                Input.mouseX = 0;
+                Input.mouseY = 0;
+            }
+            else {
+                Input.mouseX = 0;
+            }
+        }
+        // Calculate forward direction
+        let vx = speed * -Math.sin(cam.heading);
+        let vz = speed * Math.cos(cam.heading);
+        if (Input.keys.down) {
+            pos.x += vx;
+            pos.z += vz;
+        }
+        if (Input.keys.up) {
+            pos.x -= vx;
+            pos.z -= vz;
+        }
+        if (Input.keys.right) {
+            pos.x += vz;
+            pos.z -= vx;
+        }
+        if (Input.keys.left) {
+            pos.x -= vz;
+            pos.z += vx;
+        }
+        if (Input.keys.space) {
+            pos.y += speed;
+        }
+        if (Input.keys.shift) {
+            pos.y -= speed;
+        }
+        this.transform.pos = pos;
+        this.camera.pos = pos;
+    }
+}
+export class PlaneCollider {
+    constructor() {
+        this.type = "PlaneCollider";
+    }
+}
+export class BoxCollider {
+    constructor(pos, dim) {
+        this.pos = pos; // -ve axis corner
+        this.dim = dim;
+        this.type = "BoxCollider";
+    }
+    collides(_collider) {
+        if (_collider.type == "PlaneCollider") {
+            let collider = _collider;
+        }
+        if (_collider.type == "BoxCollider") {
+            let collider = _collider;
+            let p1 = this.pos;
+            let p2 = this.pos.add(this.dim);
+            let q1 = collider.pos;
+            let q2 = collider.pos.add(collider.dim);
+            return (BoxCollider.intervalOverlap(p1.x, p2.x, q1.x, q2.x) &&
+                BoxCollider.intervalOverlap(p1.y, p2.y, q1.y, q2.y) &&
+                BoxCollider.intervalOverlap(p1.z, p2.z, q1.z, q2.z));
+        }
+    }
+    static intervalOverlap(x1, x2, y1, y2) {
+        if (x1 > x2) {
+            [x1, x2] = [x2, x1];
+        }
+        if (y1 > y2) {
+            [y1, y2] = [y2, y1];
+        }
+        return (x1 <= y2 && y1 <= x2);
+    }
+    showCollider(render, camera) {
+        let scene = new Scene();
+        let bboxObj = new GameObject();
+        bboxObj.mesh = Mesh.cube();
+        bboxObj.transform.scale = this.dim.scale(1 / 2 + 0.01);
+        bboxObj.transform.pos = this.pos;
+        scene.addGameObject(bboxObj);
+        render.drawScene(scene, camera, true);
+    }
+}
+export class Body {
+    constructor(pos) {
+        this.collider = null;
+        this.pos = pos;
+        this.vel = Vec3.zero();
+        this.acc = Vec3.zero();
+    }
+    update(dt) {
+        if (this.hasCollider()) {
+        }
+        if (Number.isNaN(dt)) {
+            dt = 1;
+        }
+        console.log("The velocity of the body", this.vel.add(this.acc.scale(dt)));
+        this.vel = this.vel.add(this.acc.scale(dt));
+        this.pos = this.pos.add(this.vel.scale(dt));
+        if (this.hasCollider()) {
+            this.collider.pos = this.pos;
+        }
+        //this.bbox.pos = this.pos
+    }
+    collide(obj) {
+        if (obj.hasBody()) {
+        }
+    }
+    hasCollider() {
+        return (this.collider !== null);
     }
 }
 export class Controller {
@@ -55,6 +190,7 @@ export class Transform {
         this.pos = new Vec3();
         this.scale = new Vec3(1, 1, 1);
         this.rotate = new Vec3();
+        this.centre = Vec3.zero();
     }
     set(pos = Vec3.zero(), scale = Vec3.one(), rotate = Vec3.zero()) {
         this.pos = pos;

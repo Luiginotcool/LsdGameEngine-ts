@@ -1,3 +1,4 @@
+import { Camera } from "./engine.js";
 import { Mat4, Vec3 } from "./math.js";
 export class Render {
     constructor(gl, width, height) {
@@ -198,16 +199,19 @@ export class Render {
         //console.log("equals", modelMatrix.equals(id), modelMatrix, id)
         return modelMatrix.transpose();
     }
-    createViewMatrix(camera) {
+    createViewMatrix(camera_) {
+        let p = camera_.pos;
+        let camera = new Camera(-p.x, p.y, p.z, camera_.heading + Math.PI, camera_.pitch, camera_.fov);
         let rightVector = (new Vec3(-1, 0, 0)).rotateAroundAxis([0, 1, 0], camera.heading);
         let forward = new Vec3(Math.sin(camera.heading), 0, Math.cos(camera.heading)).rotateAroundAxis(rightVector, camera.pitch);
         let target = camera.pos.add(forward);
+        //target.x = target.x - 2*camera.pos.x
         let upVector = (new Vec3(0, 1, 0)).rotateAroundAxis(rightVector, camera.pitch);
         let viewMatrix = new Mat4();
         viewMatrix = Mat4.lookAt([-camera.pos.x, camera.pos.y, camera.pos.z], [-target.x, target.y, target.z], [-upVector.x, upVector.y, upVector.z]);
         return viewMatrix;
     }
-    drawScene(scene, camera) {
+    drawScene(scene, camera, wireframe = false) {
         // Clear screen
         // Create the buffers for the scene
         // Create the view matrix
@@ -223,7 +227,9 @@ export class Render {
         scene.gameObjectArray.forEach((gameObject) => {
             vertexCount += gameObject.hasMesh() ? gameObject.mesh.indexArray.length : 0;
         });
-        this.clear(0, 0, 0, 1);
+        if (!wireframe) {
+            this.clear(0, 0, 0, 1);
+        }
         //console.log("This is drawScene3", programInfo.attribLocations.modelMatrix)
         let buffers = this.initBuffers(scene);
         if (buffers === null) {
@@ -256,7 +262,12 @@ export class Render {
         {
             let type = gl.UNSIGNED_SHORT;
             let offset = 0;
-            gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+            if (wireframe) {
+                gl.drawElements(gl.LINE_STRIP, vertexCount, type, offset);
+            }
+            else {
+                gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+            }
             //console.log(vertexCount)
         }
     }
