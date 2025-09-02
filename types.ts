@@ -2,20 +2,19 @@ type ProgramInfo = {
     program: WebGLProgram;
     attribLocations: {
         vertexPosition: number;
-        vertexColour: number;
-        modelMatrix: number;
+        textureCoord: number;
     };
     uniformLocations: {
         projectionMatrix: WebGLUniformLocation | null;
         modelViewMatrix: WebGLUniformLocation | null;
+        uSampler: WebGLUniformLocation | null;
     };
 };
 
 type Buffers = {
     position: WebGLBuffer,
-    colour: WebGLBuffer,
+    textureCoord: WebGLBuffer,
     indices: WebGLBuffer,
-    modelMatrix: WebGLBuffer,
 }
 
 type DebugText = {
@@ -29,3 +28,5 @@ type keyFunctions = {
 type Globals = {
     [key: string] : any
 }
+
+export { ProgramInfo, Buffers }

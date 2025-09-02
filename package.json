@@ -2,11 +2,18 @@
   "name": "lsdgameengine-ts",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "gl-matrix": "^3.4.4",
+    "typescript": "^5.9.2"
+  },
+  "devDependencies": {
+    "webpack-cli": "^6.0.1"
+  }
 }

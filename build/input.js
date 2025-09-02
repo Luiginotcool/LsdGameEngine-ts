@@ -1,35 +1,31 @@
-export class Input {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Input = void 0;
+class Input {
     static init() {
         document.addEventListener('keydown', function (e) { Input.changeKey(e.key, 1); });
         document.addEventListener('keyup', function (e) { Input.changeKey(e.key, 0); });
-        document.addEventListener("mousemove", function (e) { Input.setMousePos(e.clientX, e.clientY, e.movementX, e.movementY); });
-        document.addEventListener("mousedown", function (e) { Input.changeMouseDown(e.button, true); });
-        document.addEventListener("mouseup", function (e) { Input.changeMouseDown(e.button, false); });
-        Input.mouseDx = 0;
-        Input.mouseDy = 0;
-    }
-    static setOnMouseDown(f) {
-        document.addEventListener("mousedown", function (e) { f(); });
+        document.addEventListener("mousemove", function (e) { Input.setMousePos(e.clientX, e.clientY); });
     }
     static changeKey(key, to) {
-        switch (key.toLowerCase()) {
+        switch (key) {
             // left, a
-            case "ArrowLeft".toLowerCase():
+            case "ArrowLeft":
             case "a":
                 this.keys.left = to;
                 break;
             // right, d
-            case "ArrowRight".toLowerCase():
+            case "ArrowRight":
             case "d":
                 this.keys.right = to;
                 break;
             // up, w
-            case "ArrowUp".toLowerCase():
+            case "ArrowUp":
             case "w":
                 this.keys.up = to;
                 break;
             // down, s
-            case "ArrowDown".toLowerCase():
+            case "ArrowDown":
             case "s":
                 this.keys.down = to;
                 break;
@@ -38,34 +34,17 @@ export class Input {
                 this.keys.p = to;
                 break;
             // shift
-            case "Shift".toLowerCase():
+            case "Control":
                 this.keys.shift = to;
                 break;
-            // space
-            case " ":
-                this.keys.space = to;
-                break;
         }
     }
-    static changeMouseDown(button, to) {
-        switch (button) {
-            // left mouse
-            case 0:
-                this.leftMouse = to;
-                break;
-            // right mouse
-            case 2:
-                this.rightMouse = to;
-                break;
-        }
-    }
-    static setMousePos(x, y, dx, dy) {
+    static setMousePos(x, y) {
         Input.mouseX = x;
         Input.mouseY = y;
-        Input.mouseDx = dx;
-        Input.mouseDy = dy;
     }
 }
+exports.Input = Input;
 Input.keys = {
     "left": 0,
     "right": 0,
@@ -73,5 +52,4 @@ Input.keys = {
     "down": 0,
     "p": 0,
     "shift": 0,
-    "space": 0,
 };
