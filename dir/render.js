@@ -1,8 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Render = void 0;
+const gl_matrix_1 = require("gl-matrix");
 class Render {
     static init(gl, width, height) {
+        Render.width = width;
+        Render.height = height;
         this.vsSource = `
         attribute vec4 aVertexPosition;
         attribute vec2 aTextureCoord;
@@ -40,7 +43,7 @@ class Render {
         // Look up which attributes our shader program is using
         // for aVertexPosition, aVertexColor and also
         // look up uniform locations.
-        const programInfo = {
+        Render.programInfo = {
             program: shaderProgram,
             attribLocations: {
                 vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
@@ -54,9 +57,9 @@ class Render {
         };
         // Here's where we call the routine that builds all the
         // objects we'll be drawing.
-        const buffers = Render.initBuffers();
+        Render.buffers = Render.initBuffers();
         // Load texture
-        const texture = Render.loadTexture("cubetexture.png");
+        Render.texture = Render.loadTexture("cubetexture.png");
         // Flip image pixels into the bottom-to-top order that WebGL expects.
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     }
@@ -250,6 +253,7 @@ class Render {
         return textureCoordBuffer;
     }
     static drawScene(programInfo, buffers, texture, cubeRotation) {
+        let gl = Render.gl;
         gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
         gl.clearDepth(1.0); // Clear everything
         gl.enable(gl.DEPTH_TEST); // Enable depth testing
@@ -263,37 +267,37 @@ class Render {
         // and we only want to see objects between 0.1 units
         // and 100 units away from the camera.
         const fieldOfView = (45 * Math.PI) / 180; // in radians
-        const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+        const aspect = Render.width / Render.height;
         const zNear = 0.1;
         const zFar = 100.0;
-        const projectionMatrix = mat4.create();
+        const projectionMatrix = gl_matrix_1.mat4.create();
         // note: glmatrix.js always has the first argument
         // as the destination to receive the result.
-        mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+        gl_matrix_1.mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
         // Set the drawing position to the "identity" point, which is
         // the center of the scene.
-        const modelViewMatrix = mat4.create();
+        const modelViewMatrix = gl_matrix_1.mat4.create();
         // Now move the drawing position a bit to where we want to
         // start drawing the square.
-        mat4.translate(modelViewMatrix, // destination matrix
+        gl_matrix_1.mat4.translate(modelViewMatrix, // destination matrix
         modelViewMatrix, // matrix to translate
         [-0.0, 0.0, -6.0]); // amount to translate
-        mat4.rotate(modelViewMatrix, // destination matrix
+        gl_matrix_1.mat4.rotate(modelViewMatrix, // destination matrix
         modelViewMatrix, // matrix to rotate
         cubeRotation, // amount to rotate in radians
         [0, 0, 1]); // axis to rotate around (Z)
-        mat4.rotate(modelViewMatrix, // destination matrix
+        gl_matrix_1.mat4.rotate(modelViewMatrix, // destination matrix
         modelViewMatrix, // matrix to rotate
         cubeRotation * 0.7, // amount to rotate in radians
         [0, 1, 0]); // axis to rotate around (Y)
-        mat4.rotate(modelViewMatrix, // destination matrix
+        gl_matrix_1.mat4.rotate(modelViewMatrix, // destination matrix
         modelViewMatrix, // matrix to rotate
         cubeRotation * 0.3, // amount to rotate in radians
         [1, 0, 0]); // axis to rotate around (X)
         // Tell WebGL how to pull out the positions from the position
         // buffer into the vertexPosition attribute.
-        setPositionAttribute(gl, buffers, programInfo);
-        setTextureAttribute(gl, buffers, programInfo);
+        Render.setPositionAttribute(buffers, programInfo);
+        Render.setTextureAttribute(buffers, programInfo);
         // Tell WebGL which indices to use to index the vertices
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
         // Tell WebGL to use our program when drawing
@@ -314,5 +318,29 @@ class Render {
             gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
         }
     }
+    static setPositionAttribute(buffers, programInfo) {
+        let gl = Render.gl;
+        const numComponents = 3;
+        const type = gl.FLOAT; // the data in the buffer is 32bit floats
+        const normalize = false; // don't normalize
+        const stride = 0; // how many bytes to get from one set of values to the next
+        // 0 = use type and numComponents above
+        const offset = 0; // how many bytes inside the buffer to start from
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+        gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, numComponents, type, normalize, stride, offset);
+        gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+    }
+    static setTextureAttribute(buffers, programInfo) {
+        let gl = Render.gl;
+        const num = 2; // every coordinate composed of 2 values
+        const type = gl.FLOAT; // the data in the buffer is 32-bit float
+        const normalize = false; // don't normalize
+        const stride = 0; // how many bytes to get from one set to the next
+        const offset = 0; // how many bytes inside the buffer to start from
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+        gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, num, type, normalize, stride, offset);
+        gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+    }
 }
 exports.Render = Render;
+//# sourceMappingURL=render.js.map

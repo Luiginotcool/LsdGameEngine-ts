@@ -1,17 +1,79 @@
 import { Game } from "./game.js";
-import { Vec3 } from "./math.js";
+import { vec3 } from "gl-matrix";
 import { Input } from "./input.js";
 import { Render } from "./render.js";
+import { Buffers, keyFunctions } from "./types.js";
+import { InitBuffers } from "./buffers.js";
 
-export class Engine{}
+export class Engine{
+
+    static drawScene(scene: Scene, camera: Camera) {
+        /*
+        For each Object in the scene:
+            Create buffers, attatch to object. variable model view matrix
+        Draw Scene: Scene
+            For each object in the scene:
+                if no buffers:
+                    create buffers, attatch to object
+                create model view matrix from object transform and camera transform
+                set buffer attributes
+                draw elements          
+        */
+        Render.gl.clear(Render.gl.COLOR_BUFFER_BIT | Render.gl.DEPTH_BUFFER_BIT);
+        scene.gameObjectArray.forEach((gameObject) => {
+            if (!gameObject.hasMesh()) {
+                return;
+            } 
+            if (!gameObject.hasBuffers()) {
+                // If no buffers, create buffers
+                let mesh = gameObject.mesh!
+                let vertexArray = mesh.vertexArray;
+                let indexArray = mesh.indexArray;
+                let textureCoordArray = mesh.textureCoordArray;
+                let buffers = InitBuffers.initBuffers(
+                    Render.gl,
+                    vertexArray,
+                    indexArray,
+                    textureCoordArray,
+                )
+                gameObject.buffers = buffers;
+            }
+            let t: Transform;
+            if (!gameObject.hasTransform()) {
+                t = new Transform()
+            } else {
+                t = gameObject.transform;
+            }
+            if (!gameObject.hasTexture()) {
+                gameObject.texture = Render.colourTexture(50, 0, 0)
+            }
+            let modelViewMatrix = Render.createModelViewMatrix(
+                t.pos, t.rotate, t.scale, 
+                t.centre, camera.pos, vec3.fromValues(camera.pitch, camera.heading, 0)
+            )
+            let projectionMatrix = Render.createProjectionMatrix(camera.fov);
+            let vertexCount = gameObject.mesh!.indexArray.length;
+            Render.drawBuffers(
+                Render.programInfo,
+                gameObject.buffers!,
+                modelViewMatrix,
+                projectionMatrix,
+                vertexCount,
+                gameObject.texture!
+            )
+            
+        })
+    }
+
+}
 
 export class Camera {
-    pos: Vec3
+    pos: vec3
     heading: number;
     pitch: number;
     fov: number
     constructor(x: number,y:number,z:number, heading:number, pitch:number, fov:number) {
-        this.pos = new Vec3(x,y,z);
+        this.pos = vec3.fromValues(x,y,z);
         this.heading = heading
         this.pitch = pitch;
         this.fov = fov;
@@ -28,6 +90,10 @@ export class Scene {
     addGameObject(gameObject: GameObject) {
         this.gameObjectArray.push(gameObject);
     }
+
+    addGameObjects(gameObjects: GameObject[]) {
+        this.gameObjectArray.push(...gameObjects);
+    }
 }
 
 export class GameObject {
@@ -36,12 +102,16 @@ export class GameObject {
     controller: Controller | null
     camera: Camera | null
     body: Body | null
+    buffers: Buffers | null
+    texture: WebGLTexture | null
     constructor() {
         this.mesh = null;
         this.transform = new Transform();
         this.controller = null;
         this.camera = null;
         this.body = null;
+        this.buffers = null;
+        this.texture = null;
     }
 
     update(dt: number) {
@@ -71,6 +141,14 @@ export class GameObject {
         return this.body !== null;
     }
 
+    hasBuffers() {
+        return this.buffers !== null;
+    }
+
+    hasTexture() {
+        return this.texture !== null;
+    }
+
     handleInput(dt: number) {
             let sensitivity = 0.001;
             let speed = 0.01 * dt;
@@ -83,45 +161,53 @@ export class GameObject {
             
             // Update camera rotation based on mouse movement
             if (Input.mouseLocked) {
-                if (Input.mouseX) {
-                    cam.heading += Input.mouseDx * sensitivity;
-                    cam.pitch -= Input.mouseDy * sensitivity;
+                if (true) {
+                    let dx = Input.mouseDx;
+                    let dy = Input.mouseDy;
+
+                    cam.heading -= dx * sensitivity;
+                    cam.pitch -= dy * sensitivity;
+
+
+                    //cam.heading += Input.mouseX * sensitivity;
+                    //cam.pitch -= Input.mouseY * sensitivity;
                     if (Math.abs(cam.pitch) > Math.PI/2) {
                         cam.pitch = Math.sign(cam.pitch) * Math.PI/2;
                     }
-                    Input.mouseX = 0;
-                    Input.mouseY = 0;
-                } else {
-                    Input.mouseX = 0;
+                    Input.mouseDx = 0;
+                    Input.mouseDy = 0;
+                } else {    
+                    //Input.mouseX = 0;
                 }
             }
+
             
             // Calculate forward direction
-            let vx = speed * -Math.sin(cam.heading);
+            let vx = speed * Math.sin(cam.heading);
             let vz = speed * Math.cos(cam.heading);
             if (Input.keys.down) {
-                pos.x += vx
-                pos.z += vz;
+                pos[0] += vx
+                pos[2] += vz;
             }
             if (Input.keys.up) {
-                pos.x -= vx;
-                pos.z -= vz;
+                pos[0] -= vx;
+                pos[2] -= vz;
             }
             if (Input.keys.right) {
-                pos.x += vz;
-                pos.z -= vx;
+                pos[0] += vz;
+                pos[2] -= vx;
             }
             if (Input.keys.left) {
-                pos.x -= vz;
-                pos.z += vx;
+                pos[0] -= vz;
+                pos[2] += vx;
             }
     
             if (Input.keys.space) {
-                pos.y += speed
+                pos[1] += speed
             }
     
             if (Input.keys.shift) {
-                pos.y -= speed;
+                pos[1] -= speed;
             }
             this.transform.pos = pos;
             this.camera!.pos = pos;
@@ -138,11 +224,11 @@ export class PlaneCollider {
 }
 
 export class BoxCollider {
-    pos: Vec3;
-    dim: Vec3;
+    pos: vec3;
+    dim: vec3;
     type: string
 
-    constructor(pos: Vec3, dim: Vec3) {
+    constructor(pos: vec3, dim: vec3) {
         this.pos = pos; // -ve axis corner
         this.dim = dim;
         this.type = "BoxCollider"
@@ -156,13 +242,13 @@ export class BoxCollider {
         if (_collider.type == "BoxCollider") {
             let collider = <BoxCollider>_collider;
             let p1 = this.pos;
-            let p2 = this.pos.add(this.dim);
+            let p2 = vec3.add(this.pos, this.dim, this.pos);
             let q1 = collider.pos;
-            let q2 = collider.pos.add(collider.dim);
+            let q2 = vec3.add(collider.pos, collider.pos, collider.dim)
             return (
-                BoxCollider.intervalOverlap(p1.x, p2.x, q1.x, q2.x) &&
-                BoxCollider.intervalOverlap(p1.y, p2.y, q1.y, q2.y) &&
-                BoxCollider.intervalOverlap(p1.z, p2.z, q1.z, q2.z)
+                BoxCollider.intervalOverlap(p1[0], p2[0], q1[0], q2[0]) &&
+                BoxCollider.intervalOverlap(p1[1], p2[1], q1[1], q2[1]) &&
+                BoxCollider.intervalOverlap(p1[2], p2[2], q1[2], q2[2])
             )
         }
 
@@ -183,24 +269,24 @@ export class BoxCollider {
         let scene = new Scene();
         let bboxObj = new GameObject();
         bboxObj.mesh = Mesh.cube();
-        bboxObj.transform.scale = this.dim.scale(1/2 + 0.01 );
+        bboxObj.transform.scale = vec3.scale(this.dim, this.dim, 1/2 + 0.01 );
         bboxObj.transform.pos = this.pos;
         scene.addGameObject(bboxObj);
-        render.drawScene(scene, camera, true);
+        //render.drawScene(scene, camera, true);
     }
 }
 
 export class Body {
     collider: BoxCollider | null;
-    pos: Vec3;
-    vel: Vec3;
-    acc: Vec3;
+    pos: vec3;
+    vel: vec3;
+    acc: vec3;
 
-    constructor(pos: Vec3) {
+    constructor(pos: vec3) {
         this.collider = null;
         this.pos = pos;
-        this.vel = Vec3.zero();
-        this.acc = Vec3.zero();
+        this.vel = vec3.fromValues(0,0,0);
+        this.acc = vec3.fromValues(0,0,0);
     }
 
     update(dt: number) {
@@ -213,9 +299,9 @@ export class Body {
             dt = 1;
         }
 
-        console.log("The velocity of the body",this.vel.add(this.acc.scale(dt)))
-        this.vel = this.vel.add(this.acc.scale(dt));
-        this.pos = this.pos.add(this.vel.scale(dt));
+        //console.log("The velocity of the body",this.vel.add(this.acc.scale(dt)))
+        vec3.scaleAndAdd(this.vel, this.vel, this.acc, dt);
+        vec3.scaleAndAdd(this.pos, this.pos, this.vel, dt);
 
         if (this.hasCollider()) {
             this.collider!.pos = this.pos
@@ -255,26 +341,32 @@ export class Controller {
 }
 
 export class Transform {
-    pos: Vec3
-    scale: Vec3
-    rotate: Vec3
-    centre: Vec3
+    pos: vec3
+    scale: vec3
+    rotate: vec3
+    centre: vec3
     constructor() {
-        this.pos = new Vec3();
-        this.scale = new Vec3(1, 1, 1);
-        this.rotate = new Vec3();
-        this.centre = Vec3.zero();
+        this.pos = vec3.fromValues(0,0,0);
+        this.scale = vec3.fromValues(1,1,1);
+        this.rotate = vec3.fromValues(0,0,0);
+        this.centre = vec3.fromValues(0,0,0);
     }
 
-    set(pos: Vec3 = Vec3.zero(), scale: Vec3 = Vec3.one(), rotate: Vec3 = Vec3.zero()) {
-        this.pos = pos;
-        if (scale.has(0)) {
-            scale = Vec3.one();
-            console.log("Scale has a zero!")
+    set(pos?: vec3, scale?: vec3, rotate?: vec3) {
+        if (pos !== undefined) {
+            this.pos = pos;
         }
-        this.scale = scale;
-        this.rotate = rotate;
-
+        if (scale !== undefined) {
+            if (scale[0] == 0 || scale[1] == 0 || scale[2] == 0) {
+                scale = vec3.fromValues(1,1,1);
+                console.log("Scale has a zero!")
+            } else {
+                this.scale = scale;
+            }
+        }
+        if (rotate !== undefined) {
+            this.rotate = rotate;
+        }
         return this;
     }
 }
@@ -283,9 +375,11 @@ export class Mesh {
     vertexArray: number[]
     indexArray: number[]
     faceColourArray: number[]
-    constructor(vertexArray: number[] = [], indexArray: number[] = [], faceColourArray: number[] = []) {
+    textureCoordArray: number[]
+    constructor(vertexArray: number[] = [], indexArray: number[] = [], faceColourArray: number[] = [], textureCoordArray: number[] = []) {
         this.vertexArray = vertexArray;
         this.indexArray = indexArray;
+        this.textureCoordArray = textureCoordArray;
         //console.log("Filling arrays", faceColourArray.length, 4 * indexArray.length / 3,  4 * indexArray.length / 3 - faceColourArray.length)
         let numFaces = indexArray.length / 3;
         if (faceColourArray.length < 4 * numFaces) {
@@ -297,15 +391,11 @@ export class Mesh {
         this.faceColourArray = faceColourArray;
     }
 
-    translate(vec: Vec3): Mesh {
+    translate(vec: vec3): Mesh {
         let newVA: number[] = []
         this.vertexArray.forEach((v, i) => {
             let t = 0;
-            switch (i%3) {
-                case 0: {t = vec.x; break}
-                case 1: {t = vec.y; break}
-                case 2: {t = vec.z; break}
-            }
+            t = vec[i%3];
             newVA.push(v + t)
         })
         let out = new Mesh(newVA, this.indexArray, this.faceColourArray);
@@ -352,8 +442,22 @@ export class Mesh {
             c6 c6 c6 c6
             */
         }
+        let textureCoordArray = [
+            // Front
+            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+            // Back
+            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+            // Top
+            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+            // Bottom
+            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+            // Right
+            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+            // Left
+            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+        ]
         //console.log("AAA", faceColourArray)
-        let mesh = new Mesh(vertexArray, indexArray, faceColourArray);
+        let mesh = new Mesh(vertexArray, indexArray, faceColourArray, textureCoordArray);
         return mesh;
     }
 
@@ -367,9 +471,12 @@ export class Mesh {
         let indexArray = [
             0, 1, 2, 0, 2, 3
         ];
+        let textureCoordArray = [
+            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0
+        ]
         let c = [Math.random(), Math.random(), Math.random(), 1.0]
         let faceColourArray: number[] = Array().concat(c, c, c, c);
-        let mesh = new Mesh(vertexArray, indexArray, faceColourArray);
+        let mesh = new Mesh(vertexArray, indexArray, faceColourArray, textureCoordArray);
         return mesh;
     }
 }

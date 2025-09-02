@@ -39,3 +39,4 @@ class App {
     }
 }
 App.init();
+//# sourceMappingURL=app.js.map

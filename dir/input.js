@@ -53,3 +53,4 @@ Input.keys = {
     "p": 0,
     "shift": 0,
 };
+//# sourceMappingURL=input.js.map
