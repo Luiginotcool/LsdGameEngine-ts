@@ -1,19 +1,15 @@
 {
-  "name": "lsdgameengine-ts",
-  "version": "1.0.0",
-  "description": "",
-  "private": true,
+  "name": "gl-matrix-test",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "vite build",
+    "start": "vite"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "dependencies": {
-    "gl-matrix": "^3.4.4",
-    "typescript": "^5.9.2"
+    "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
-    "webpack-cli": "^6.0.1"
+    "typescript": "^5.2.2",
+    "vite": "6"
   }
 }

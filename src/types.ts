@@ -1,4 +1,4 @@
-type ProgramInfo = {
+export type ProgramInfo = {
     program: WebGLProgram;
     attribLocations: {
         vertexPosition: number;
@@ -11,22 +11,21 @@ type ProgramInfo = {
     };
 };
 
-type Buffers = {
+export type Buffers = {
     position: WebGLBuffer,
     textureCoord: WebGLBuffer,
     indices: WebGLBuffer,
 }
 
-type DebugText = {
+export type DebugText = {
     [heading: string] : string | number
 }
 
-type keyFunctions = {
+export type keyFunctions = {
     [key: string] : Function
 }
 
-type Globals = {
+export type Globals = {
     [key: string] : any
 }
 
-export { ProgramInfo, Buffers }
