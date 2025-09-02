@@ -27,7 +27,7 @@ export class Game {
 
         cube.mesh = Mesh.cube();
         cube.transform = new Transform();
-        //cube.transform.set(vec3.fromValues(1,0,-4))
+        cube.transform.set(vec3.fromValues(5,0,-4))
         cube.texture = texture;
         Game.player = new GameObject();
         Game.player.camera = new Camera(0, 0, 0, 0, 0, 45);

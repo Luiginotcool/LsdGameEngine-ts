@@ -80,7 +80,7 @@ export class InitBuffers {
         ];
         */
         let textureCoordinates: number[] = []
-        textureCoordArray.forEach((texCoord) => {textureCoordArray.push(texCoord)})
+        textureCoordArray.forEach((texCoord) => {textureCoordinates.push(texCoord)})
 
         gl.bufferData(
             gl.ARRAY_BUFFER,
