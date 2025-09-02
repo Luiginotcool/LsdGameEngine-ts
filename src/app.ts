@@ -1,6 +1,7 @@
 import { Input } from "./input";
 import { Game } from "./game";
 import { Render} from "./render"
+import { DebugText } from "./types";
 
 export class App {
     static canvas: HTMLCanvasElement;
@@ -10,6 +11,7 @@ export class App {
     static oldTimeStamp: number;
     static noLoop: boolean;
     static dt: number;
+    static overlay: HTMLDivElement;
 
     static init(): void {
         App.canvas = <HTMLCanvasElement>document.getElementById("canvas");
@@ -28,6 +30,10 @@ export class App {
 
         App.canvas.onclick = function() {
             App.canvas.requestPointerLock();
+        }
+        let overlay = document.getElementById("overlay");
+        if (overlay !== null) {
+            this.overlay = overlay as HTMLDivElement;
         }
 
         
@@ -49,10 +55,29 @@ export class App {
             Game.gameLoop(App.dt);
             App.frames++;
             Input.mouseLocked = (document.pointerLockElement === App.canvas);
+
+            let debugString = {
+                "Fps": fps,
+                "mouseX": Input.mouseX
+            }
+            App.displayDebug(debugString)
     
             App.noLoop = false;
             window.requestAnimationFrame(App.gameLoop);
         }
+    }
+
+    static displayDebug(text: DebugText) {
+        let displayString = ""
+        for (const key in text){
+            let entry = text[key];
+            if (typeof entry == "number") {
+                entry = entry.toFixed(1);
+            }
+            displayString += `${key}: ${entry}\n`
+        }
+        let displayHTML = displayString.split("\n").join("<br>");
+        App.overlay.innerHTML = displayHTML;
     }
 }
 

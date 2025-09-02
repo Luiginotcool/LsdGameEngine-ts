@@ -19,7 +19,7 @@ export class Engine{
                 set buffer attributes
                 draw elements          
         */
-
+        Render.gl.clear(Render.gl.COLOR_BUFFER_BIT | Render.gl.DEPTH_BUFFER_BIT);
         scene.gameObjectArray.forEach((gameObject) => {
             if (!gameObject.hasMesh()) {
                 return;
@@ -90,6 +90,10 @@ export class Scene {
     addGameObject(gameObject: GameObject) {
         this.gameObjectArray.push(gameObject);
     }
+
+    addGameObjects(gameObjects: GameObject[]) {
+        this.gameObjectArray.push(...gameObjects);
+    }
 }
 
 export class GameObject {
@@ -157,21 +161,29 @@ export class GameObject {
             
             // Update camera rotation based on mouse movement
             if (Input.mouseLocked) {
-                if (Input.mouseX) {
-                    cam.heading += Input.mouseX * sensitivity;
-                    cam.pitch -= Input.mouseY * sensitivity;
+                if (true) {
+                    let dx = Input.mouseDx;
+                    let dy = Input.mouseDy;
+
+                    cam.heading -= dx * sensitivity;
+                    cam.pitch -= dy * sensitivity;
+
+
+                    //cam.heading += Input.mouseX * sensitivity;
+                    //cam.pitch -= Input.mouseY * sensitivity;
                     if (Math.abs(cam.pitch) > Math.PI/2) {
                         cam.pitch = Math.sign(cam.pitch) * Math.PI/2;
                     }
-                    Input.mouseX = 0;
-                    Input.mouseY = 0;
-                } else {
-                    Input.mouseX = 0;
+                    Input.mouseDx = 0;
+                    Input.mouseDy = 0;
+                } else {    
+                    //Input.mouseX = 0;
                 }
             }
+
             
             // Calculate forward direction
-            let vx = speed * -Math.sin(cam.heading);
+            let vx = speed * Math.sin(cam.heading);
             let vz = speed * Math.cos(cam.heading);
             if (Input.keys.down) {
                 pos[0] += vx

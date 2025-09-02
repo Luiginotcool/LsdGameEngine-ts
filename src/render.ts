@@ -241,75 +241,24 @@ export class Render {
         modelPos: vec3, modelRotate: vec3, modelScale: vec3, modelCentre: vec3,
         camPos: vec3, camRotate: vec3,
     ) {
-        const modelViewMatrix = mat4.create();
+        const mv = mat4.create();
 
-        // Now move the drawing position a bit to where we want to
-        // start drawing the square.
-        mat4.translate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to translate
-            modelPos
-        ); // amount to translate
+        // Camera transform
+        mat4.rotateX(mv, mv, -camRotate[0]);
+        mat4.rotateY(mv, mv, -camRotate[1]);
+        mat4.rotateZ(mv, mv, -camRotate[2]);
+        mat4.translate(mv, mv, [-camPos[0], -camPos[1], -camPos[2]]);
 
-        mat4.translate(
-            modelViewMatrix,
-            modelViewMatrix,
-            vec3.fromValues(-modelCentre[0], -modelCentre[1], -modelCentre[2])
-        )
+        // Model transform
+        mat4.translate(mv, mv, modelPos);
+        mat4.translate(mv, mv, modelCentre);
+        mat4.rotateX(mv, mv, modelRotate[0]);
+        mat4.rotateY(mv, mv, modelRotate[1]);
+        mat4.rotateZ(mv, mv, modelRotate[2]);
+        mat4.translate(mv, mv, [-modelCentre[0], -modelCentre[1], -modelCentre[2]]);
+        mat4.scale(mv, mv, modelScale);
 
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            modelRotate[2], // amount to rotate in radians
-            [0, 0, 1]
-        ); // axis to rotate around (Z)
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            modelRotate[1], // amount to rotate in radians
-            [0, 1, 0]
-        ); // axis to rotate around (Y)
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            modelRotate[0], // amount to rotate in radians
-            [1, 0, 0]
-        ); // axis to rotate around (X)
-
-        mat4.scale(
-            modelViewMatrix,
-            modelViewMatrix,
-            modelScale,
-        )
-        let negCamPos = vec3.create();
-        let negCamRotate = vec3.create();
-        vec3.negate(negCamPos, camPos);
-        vec3.negate(negCamRotate, camRotate);
-        mat4.translate(
-            modelViewMatrix,
-            modelViewMatrix,
-            negCamPos
-        )
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            negCamRotate[2], // amount to rotate in radians
-            [0, 0, 1]
-        ); // axis to rotate around (Z)
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            negCamRotate[1], // amount to rotate in radians
-            [0, 1, 0]
-        ); // axis to rotate around (Y)
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            negCamRotate[0], // amount to rotate in radians
-            [1, 0, 0]
-        ); // axis to rotate around (X)
-
-        return modelViewMatrix;
+        return mv;
     }
 
     static createProjectionMatrix(fov: number) {
@@ -343,7 +292,7 @@ export class Render {
 
         // Clear the canvas before we start drawing on it.
 
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        
         console.log("CLEAR")
 
  
