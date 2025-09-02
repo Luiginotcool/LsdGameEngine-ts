@@ -1,5 +1,8 @@
-import { vec3, mat4 } from "gl-matrix";
+import { App } from "./app"
+App.init();
 
+
+/*
 // Create two 3D vectors
 const a = vec3.fromValues(1, 2, 3);
 const b = vec3.fromValues(4, 5, 6);
@@ -29,3 +32,4 @@ console.log("Translated matrix:", matrix);
 // Apply rotation around Z axis (90 degrees)
 mat4.rotateZ(matrix, matrix, Math.PI / 2);
 console.log("Rotated matrix:", matrix);
+*/

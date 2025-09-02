@@ -1,8 +1,8 @@
-import { Input } from "./input.js";
-import { Game } from "./game.js";
-import { Render} from "./render.js"
+import { Input } from "./input";
+import { Game } from "./game";
+import { Render} from "./render"
 
-class App {
+export class App {
     static canvas: HTMLCanvasElement;
     static width: number;
     static height: number;
@@ -26,6 +26,10 @@ class App {
         if (gl === null) {alert("NO webgl :("); return;}
         Render.init(gl, App.width, App.height)
 
+        App.canvas.onclick = function() {
+            App.canvas.requestPointerLock();
+        }
+
         
         Input.init();
         console.log(Input.keys)
@@ -42,8 +46,9 @@ class App {
             App.dt = (timeStamp - App.oldTimeStamp);
             App.oldTimeStamp = timeStamp;
             let fps = Math.round(1000 / (App.dt < 1000/60 ? 1000/60: App.dt));
-
+            Game.gameLoop(App.dt);
             App.frames++;
+            Input.mouseLocked = (document.pointerLockElement === App.canvas);
     
             App.noLoop = false;
             window.requestAnimationFrame(App.gameLoop);
@@ -51,4 +56,3 @@ class App {
     }
 }
 
-App.init();

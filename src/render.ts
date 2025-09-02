@@ -1,7 +1,7 @@
-import { glMatrix, mat4 } from "gl-matrix";
+import { glMatrix, mat4, vec3 } from "gl-matrix";
 import { Buffers, ProgramInfo } from "./types";
 import { readBuilderProgram } from "typescript";
-
+import { InitBuffers } from "./buffers"
 
 export class Render {
     static vsSource: string;
@@ -17,6 +17,7 @@ export class Render {
     static init(gl: WebGLRenderingContext, width: number, height: number) {
         Render.width = width;
         Render.height = height;
+        Render.gl = gl;
         this.vsSource = `
         attribute vec4 aVertexPosition;
         attribute vec2 aTextureCoord;
@@ -46,7 +47,7 @@ export class Render {
 
 
         // Set clear color to black, fully opaque
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clearColor(0.5, 0.0, 0.0, 1.0);
         // Clear the color buffer with specified clear color
         gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -75,7 +76,7 @@ export class Render {
 
         // Here's where we call the routine that builds all the
         // objects we'll be drawing.
-        Render.buffers = Render.initBuffers();
+        //Render.buffers = Buffer.initBuffers(gl);
 
         // Load texture
         Render.texture = Render.loadTexture("cubetexture.png");
@@ -168,6 +169,7 @@ export class Render {
         );
 
         const image = new Image();
+        image.crossOrigin = "anonymous";
         function isPowerOf2(value: number) {
             return (value & (value - 1)) === 0;
         }
@@ -181,6 +183,7 @@ export class Render {
             srcType,
             image
             );
+            console.log("Texture loaded")
 
             // WebGL1 has different requirements for power of 2 images
             // vs non power of 2 images so check if the image is a
@@ -201,164 +204,116 @@ export class Render {
         return texture;
     }
 
-    static initBuffers() {
-        const positionBuffer = Render.initPositionBuffer();
-
-        const textureCoordBuffer = Render.initTextureBuffer();
-
-        const indexBuffer = Render.initIndexBuffer();
-
-        return {
-            position: positionBuffer,
-            textureCoord: textureCoordBuffer,
-            indices: indexBuffer,
-        };
-    }
-
-    static initPositionBuffer() {
+    static colourTexture(r: number, g: number, b: number) {
+        /*r,g,b: [0-255]*/
         let gl = Render.gl;
-        // Create a buffer for the square's positions.
-        const positionBuffer = gl.createBuffer();
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
 
-        // Select the positionBuffer as the one to apply buffer
-        // operations to from here out.
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-        const positions = [
-            // Front face
-            -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
-
-            // Back face
-            -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0,
-
-            // Top face
-            -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0,
-
-            // Bottom face
-            -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
-
-            // Right face
-            1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0,
-
-            // Left face
-            -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0,
-        ];
-
-        // Now pass the list of positions into WebGL to build the
-        // shape. We do this by creating a Float32Array from the
-        // JavaScript array, then use it to fill the current buffer.
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-        return positionBuffer;
-    }
-
-
-    static initIndexBuffer() {
-        let gl = Render.gl;
-        const indexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
-        // This array defines each face as two triangles, using the
-        // indices into the vertex array to specify each triangle's
-        // position.
-
-        const indices = [
-            0,
-            1,
-            2,
-            0,
-            2,
-            3, // front
-            4,
-            5,
-            6,
-            4,
-            6,
-            7, // back
-            8,
-            9,
-            10,
-            8,
-            10,
-            11, // top
-            12,
-            13,
-            14,
-            12,
-            14,
-            15, // bottom
-            16,
-            17,
-            18,
-            16,
-            18,
-            19, // right
-            20,
-            21,
-            22,
-            20,
-            22,
-            23, // left
-        ];
-
-        // Now send the element array to GL
-
-        gl.bufferData(
-            gl.ELEMENT_ARRAY_BUFFER,
-            new Uint16Array(indices),
-            gl.STATIC_DRAW
+        // Because images have to be downloaded over the internet
+        // they might take a moment until they are ready.
+        // Until then put a single pixel in the texture so we can
+        // use it immediately. When the image has finished downloading
+        // we'll update the texture with the contents of the image.
+        const level = 0;
+        const internalFormat = gl.RGBA;
+        const width = 1;
+        const height = 1;
+        const border = 0;
+        const srcFormat = gl.RGBA;
+        const srcType = gl.UNSIGNED_BYTE;
+        const pixel = new Uint8Array([r, g, b, 255]); // opaque blue
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            level,
+            internalFormat,
+            width,
+            height,
+            border,
+            srcFormat,
+            srcType,
+            pixel
         );
-
-        return indexBuffer;
-        }
-
-    static initTextureBuffer() {
-        let gl = Render.gl;
-        const textureCoordBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-
-        const textureCoordinates = [
-            // Front
-            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
-            // Back
-            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
-            // Top
-            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
-            // Bottom
-            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
-            // Right
-            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
-            // Left
-            0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
-        ];
-
-        gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array(textureCoordinates),
-            gl.STATIC_DRAW
-        );
-        return textureCoordBuffer;
+        return texture;
     }
 
-    static drawScene(programInfo: ProgramInfo, buffers: Buffers, texture: WebGLTexture, cubeRotation: number) {
-        let gl = Render.gl;
-        gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
-        gl.clearDepth(1.0); // Clear everything
-        gl.enable(gl.DEPTH_TEST); // Enable depth testing
-        gl.depthFunc(gl.LEQUAL); // Near things obscure far things
+    static createModelViewMatrix(
+        modelPos: vec3, modelRotate: vec3, modelScale: vec3, modelCentre: vec3,
+        camPos: vec3, camRotate: vec3,
+    ) {
+        const modelViewMatrix = mat4.create();
 
-        // Clear the canvas before we start drawing on it.
+        // Now move the drawing position a bit to where we want to
+        // start drawing the square.
+        mat4.translate(
+            modelViewMatrix, // destination matrix
+            modelViewMatrix, // matrix to translate
+            modelPos
+        ); // amount to translate
 
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        mat4.translate(
+            modelViewMatrix,
+            modelViewMatrix,
+            vec3.fromValues(-modelCentre[0], -modelCentre[1], -modelCentre[2])
+        )
 
-        // Create a perspective matrix, a special matrix that is
-        // used to simulate the distortion of perspective in a camera.
-        // Our field of view is 45 degrees, with a width/height
-        // ratio that matches the display size of the canvas
-        // and we only want to see objects between 0.1 units
-        // and 100 units away from the camera.
+        mat4.rotate(
+            modelViewMatrix, // destination matrix
+            modelViewMatrix, // matrix to rotate
+            modelRotate[2], // amount to rotate in radians
+            [0, 0, 1]
+        ); // axis to rotate around (Z)
+        mat4.rotate(
+            modelViewMatrix, // destination matrix
+            modelViewMatrix, // matrix to rotate
+            modelRotate[1], // amount to rotate in radians
+            [0, 1, 0]
+        ); // axis to rotate around (Y)
+        mat4.rotate(
+            modelViewMatrix, // destination matrix
+            modelViewMatrix, // matrix to rotate
+            modelRotate[0], // amount to rotate in radians
+            [1, 0, 0]
+        ); // axis to rotate around (X)
 
-        const fieldOfView = (45 * Math.PI) / 180; // in radians
+        mat4.scale(
+            modelViewMatrix,
+            modelViewMatrix,
+            modelScale,
+        )
+        let negCamPos = vec3.create();
+        let negCamRotate = vec3.create();
+        vec3.negate(negCamPos, camPos);
+        vec3.negate(negCamRotate, camRotate);
+        mat4.translate(
+            modelViewMatrix,
+            modelViewMatrix,
+            negCamPos
+        )
+        mat4.rotate(
+            modelViewMatrix, // destination matrix
+            modelViewMatrix, // matrix to rotate
+            negCamRotate[2], // amount to rotate in radians
+            [0, 0, 1]
+        ); // axis to rotate around (Z)
+        mat4.rotate(
+            modelViewMatrix, // destination matrix
+            modelViewMatrix, // matrix to rotate
+            negCamRotate[1], // amount to rotate in radians
+            [0, 1, 0]
+        ); // axis to rotate around (Y)
+        mat4.rotate(
+            modelViewMatrix, // destination matrix
+            modelViewMatrix, // matrix to rotate
+            negCamRotate[0], // amount to rotate in radians
+            [1, 0, 0]
+        ); // axis to rotate around (X)
+
+        return modelViewMatrix;
+    }
+
+    static createProjectionMatrix(fov: number) {
+        const fieldOfView = (fov * Math.PI) / 180; // in radians
         const aspect = Render.width / Render.height;
         const zNear = 0.1;
         const zFar = 100.0;
@@ -367,37 +322,32 @@ export class Render {
         // note: glmatrix.js always has the first argument
         // as the destination to receive the result.
         mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+        return projectionMatrix;
+    }
 
-        // Set the drawing position to the "identity" point, which is
-        // the center of the scene.
-        const modelViewMatrix = mat4.create();
+    
 
-        // Now move the drawing position a bit to where we want to
-        // start drawing the square.
-        mat4.translate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to translate
-            [-0.0, 0.0, -6.0]
-        ); // amount to translate
+    static drawBuffers(
+        programInfo: ProgramInfo,
+        buffers: Buffers, 
+        modelViewMatrix: mat4,
+        projectionMatrix: mat4,   
+        vertexCount: number,
+        texture: WebGLTexture,  
+    ) {
+        let gl = Render.gl;
+        gl.clearColor(0.0, 0.5, 0.0, 1.0); // Clear to black, fully opaque
+        gl.clearDepth(1.0); // Clear everything
+        gl.enable(gl.DEPTH_TEST); // Enable depth testing
+        gl.depthFunc(gl.LEQUAL); // Near things obscure far things
 
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            cubeRotation, // amount to rotate in radians
-            [0, 0, 1]
-        ); // axis to rotate around (Z)
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            cubeRotation * 0.7, // amount to rotate in radians
-            [0, 1, 0]
-        ); // axis to rotate around (Y)
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            cubeRotation * 0.3, // amount to rotate in radians
-            [1, 0, 0]
-        ); // axis to rotate around (X)
+        // Clear the canvas before we start drawing on it.
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        console.log("CLEAR")
+
+ 
+
 
         // Tell WebGL how to pull out the positions from the position
         // buffer into the vertexPosition attribute.
@@ -433,7 +383,7 @@ export class Render {
         gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
         {
-            const vertexCount = 36;
+            const vertexCount = 18;
             const type = gl.UNSIGNED_SHORT;
             const offset = 0;
             gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
