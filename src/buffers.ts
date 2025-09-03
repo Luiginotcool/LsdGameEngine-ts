@@ -1,5 +1,3 @@
-import { Scene } from "./engine";
-
 export class InitBuffers {
     static initBuffers(gl: WebGLRenderingContext, vertexArray: number[], indexArray: number[], textureCoordArray: number[]) {
         const positionBuffer = InitBuffers.initPositionBuffer(gl, vertexArray);

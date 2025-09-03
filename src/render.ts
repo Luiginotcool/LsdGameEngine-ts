@@ -1,6 +1,5 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
 import { Buffers, ProgramInfo } from "./types";
-import { readBuilderProgram } from "typescript";
 import { InitBuffers } from "./buffers"
 
 export class Render {
