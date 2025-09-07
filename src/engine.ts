@@ -59,7 +59,8 @@ export class Engine{
                 modelViewMatrix,
                 projectionMatrix,
                 vertexCount,
-                gameObject.texture!
+                gameObject.texture!,
+                true
             )
             
         })
@@ -352,20 +353,32 @@ export class Transform {
         this.centre = vec3.fromValues(0,0,0);
     }
 
-    set(pos?: vec3, scale?: vec3, rotate?: vec3) {
-        if (pos !== undefined) {
-            this.pos = pos;
-        }
-        if (scale !== undefined) {
-            if (scale[0] == 0 || scale[1] == 0 || scale[2] == 0) {
+    setPos(pos: vec3) {
+        this.pos = pos;
+    }
+
+    setScale(scale: vec3) {
+        if (scale[0] == 0 || scale[1] == 0 || scale[2] == 0) {
                 scale = vec3.fromValues(1,1,1);
                 console.log("Scale has a zero!")
             } else {
                 this.scale = scale;
             }
+    }
+
+    setRotate(rotate: vec3) {
+        this.rotate = rotate;
+    }
+
+    set(pos?: vec3, scale?: vec3, rotate?: vec3) {
+        if (pos !== undefined) {
+            this.setPos(pos);
+        }
+        if (scale !== undefined) {
+            this.setScale(scale);
         }
         if (rotate !== undefined) {
-            this.rotate = rotate;
+            this.setRotate(rotate);
         }
         return this;
     }
@@ -478,5 +491,14 @@ export class Mesh {
         let faceColourArray: number[] = Array().concat(c, c, c, c);
         let mesh = new Mesh(vertexArray, indexArray, faceColourArray, textureCoordArray);
         return mesh;
+    }
+
+        static union(m1: Mesh, m2: Mesh): Mesh {
+        let vertexArray = m1.vertexArray.concat(m2.vertexArray);
+        let indexOffset = m1.vertexArray.length / 3;
+        let indexArray = m1.indexArray.concat(m2.indexArray.map(i => i + indexOffset));
+        let faceColourArray = m1.faceColourArray.concat(m2.faceColourArray);
+        let textureCoordArray = m1.textureCoordArray.concat(m2.textureCoordArray);
+        return new Mesh(vertexArray, indexArray, faceColourArray, textureCoordArray);
     }
 }

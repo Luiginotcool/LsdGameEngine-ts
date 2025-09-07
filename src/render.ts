@@ -282,6 +282,7 @@ export class Render {
         projectionMatrix: mat4,   
         vertexCount: number,
         texture: WebGLTexture,  
+        wireframe?: boolean,
     ) {
         let gl = Render.gl;
         gl.clearColor(0.0, 0.5, 0.0, 1.0); // Clear to black, fully opaque
@@ -334,6 +335,7 @@ export class Render {
             const type = gl.UNSIGNED_SHORT;
             const offset = 0;
             gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+            if (wireframe) {gl.drawElements(gl.LINES, vertexCount, type, offset)}
         }
     }
 
