@@ -1,14 +1,17 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { Buffers, ProgramInfo } from "./types";
+import { Buffers, FaceInfo, ProgramInfo, SkyboxBuffers, SkyboxProgramInfo } from "./types";
 import { InitBuffers } from "./buffers"
 
 export class Render {
     static vsSource: string;
     static fsSource: string;
+    static vsSkybox: string;
+    static fsSkybox: string;
     static gl: WebGLRenderingContext
     static width: number;
     static height: number;
     static programInfo: ProgramInfo;
+    static skyboxProgramInfo: SkyboxProgramInfo;
     static texture: WebGLTexture;
     static buffers: Buffers;
 
@@ -44,6 +47,28 @@ export class Render {
         }
         `;
 
+        this.vsSkybox = `
+        attribute vec4 a_position;
+        varying vec4 v_position;
+        void main() {
+            v_position = a_position;
+            gl_Position = a_position;
+            gl_Position.z = 1.0;
+        }
+        `
+
+        this.fsSkybox = `
+        precision mediump float;
+        
+        uniform samplerCube u_skybox;
+        uniform mat4 u_viewDirectionProjectionInverse;
+        
+        varying vec4 v_position;
+        void main() {
+            vec4 t = u_viewDirectionProjectionInverse * v_position;
+            gl_FragColor = textureCube(u_skybox, normalize(t.xyz / t.w));
+        }
+        `
 
         // Set clear color to black, fully opaque
         gl.clearColor(0.5, 0.0, 0.0, 1.0);
@@ -73,12 +98,25 @@ export class Render {
             },
         };
 
+        const skyboxShaderProgram = Render.initShaderProgram(Render.vsSkybox, Render.fsSkybox);
+        if (skyboxShaderProgram === null ) { alert("no shader program"); return null;}
+        Render.skyboxProgramInfo = {
+            program: skyboxShaderProgram,
+            attribLocations: {
+                vertexPosition: gl.getAttribLocation(skyboxShaderProgram, "a_position"),
+            },
+            uniformLocations: {
+                uSkybox: gl.getUniformLocation(skyboxShaderProgram, "u_skybox"),
+                uViewDirectionProjectionInverse: gl.getUniformLocation(skyboxShaderProgram, "u_viewDirectionProjectionInverse"),
+            },
+        };
+
         // Here's where we call the routine that builds all the
         // objects we'll be drawing.
         //Render.buffers = Buffer.initBuffers(gl);
 
         // Load texture
-        Render.texture = Render.loadTexture("cubetexture.png");
+        //Render.texture = Render.loadTexture("cubetexture.png");
         // Flip image pixels into the bottom-to-top order that WebGL expects.
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
@@ -90,7 +128,7 @@ export class Render {
         const vertexShader = this.loadShader(gl.VERTEX_SHADER, vsSource);
         const fragmentShader = this.loadShader(gl.FRAGMENT_SHADER, fsSource);
         if (vertexShader === null || fragmentShader === null) {alert("no shader"); return null;}
-
+        console.log(vertexShader, fragmentShader)
         // Create the shader program
 
         const shaderProgram = gl.createProgram();
@@ -236,6 +274,74 @@ export class Render {
         return texture;
     }
 
+    static cubeMapTexture(faceInfos: FaceInfo[]) {
+        let gl = Render.gl;
+        let texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+        faceInfos = [
+            {
+            target: gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+            url: '/pos_x.png',
+            },
+            {
+            target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+            url: '/neg_x.png',
+            },
+            {
+            target: gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+            url: '/neg_y.png',
+            },
+            {
+            target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+            url: '/pos_y.png',
+            },
+            {
+            target: gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+            url: '/pos_z.png',
+            },
+            {
+            target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
+            url: '/neg_z.png',
+            },
+        ];
+        faceInfos.forEach((faceInfo) => {
+            const {target, url} = faceInfo;
+
+            const level = 0;
+            const internalFormat = gl.RGBA;
+            const width = 512;
+            const height = 512;
+            const format = gl.RGBA;
+            const type = gl.UNSIGNED_BYTE;
+            gl.texImage2D(target, level, internalFormat, width, height, 0, format, type, null); 
+            const image = new Image();
+            image.src = url;
+            image.addEventListener('load', function() {
+                // Now that the image has loaded make copy it to the texture.
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+                gl.texImage2D(target, level, internalFormat, format, type, image);
+                gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+            });
+        })
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        return texture;
+    }
+
+    static createViewMatrix(
+        camPos: vec3, camRotate: vec3
+    ) {
+        const viewMatrix = mat4.create();
+
+        // Camera transform
+        mat4.rotateX(viewMatrix, viewMatrix, -camRotate[0]);
+        mat4.rotateY(viewMatrix, viewMatrix, -camRotate[1]);
+        mat4.rotateZ(viewMatrix, viewMatrix, -camRotate[2]);
+        mat4.translate(viewMatrix, viewMatrix, [-camPos[0], -camPos[1], -camPos[2]]);
+
+        return viewMatrix;
+    }
+
     static createModelViewMatrix(
         modelPos: vec3, modelRotate: vec3, modelScale: vec3, modelCentre: vec3,
         camPos: vec3, camRotate: vec3,
@@ -273,6 +379,34 @@ export class Render {
         return projectionMatrix;
     }
 
+
+    static drawSkyboxBuffers(
+        programInfo: SkyboxProgramInfo,
+        buffers: SkyboxBuffers,
+        viewMatrix: mat4,
+        projectionMatrix: mat4,
+        texture: WebGLTexture,
+    ) {
+        let gl = Render.gl;
+        gl.useProgram(programInfo.program);
+
+        Render.setSkyboxPositionAttribute(buffers, programInfo);
+
+        let viewDirectionProjectionInverse = mat4.create();
+        mat4.multiply(viewDirectionProjectionInverse, projectionMatrix, viewMatrix);
+        mat4.invert(viewDirectionProjectionInverse, viewDirectionProjectionInverse);
+        gl.uniformMatrix4fv(
+            programInfo.uniformLocations.uViewDirectionProjectionInverse, false, viewDirectionProjectionInverse
+        )
+
+        gl.uniform1i(programInfo.uniformLocations.uSkybox, 0);
+
+        gl.depthFunc(gl.LEQUAL);
+
+        // Draw the geometry.
+        gl.drawArrays(gl.TRIANGLES, 0, 1 * 6);
+    }
+
     
 
     static drawBuffers(
@@ -282,6 +416,7 @@ export class Render {
         projectionMatrix: mat4,   
         vertexCount: number,
         texture: WebGLTexture,  
+        wireframe?: boolean,
     ) {
         let gl = Render.gl;
         gl.clearColor(0.0, 0.5, 0.0, 1.0); // Clear to black, fully opaque
@@ -292,7 +427,7 @@ export class Render {
         // Clear the canvas before we start drawing on it.
 
         
-        console.log("CLEAR")
+        //console.log("CLEAR")
 
  
 
@@ -334,7 +469,27 @@ export class Render {
             const type = gl.UNSIGNED_SHORT;
             const offset = 0;
             gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+            if (wireframe) {gl.drawElements(gl.LINES, vertexCount, type, offset)}
         }
+    }
+
+    static setSkyboxPositionAttribute(buffers: SkyboxBuffers, programInfo: SkyboxProgramInfo) {
+        let gl = Render.gl;
+        const size = 2;
+        const type = gl.FLOAT; // the data in the buffer is 32bit floats
+        const normalize = false; // don't normalize
+        const stride = 0; // how many bytes to get from one set of values to the next
+        const offset = 0;
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+        gl.vertexAttribPointer(
+            programInfo.attribLocations.vertexPosition,
+            size,
+            type,
+            normalize,
+            stride,
+            offset
+        );
+        gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
     }
 
     static setPositionAttribute(buffers: Buffers, programInfo: ProgramInfo) {

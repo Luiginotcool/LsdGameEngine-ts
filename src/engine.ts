@@ -17,7 +17,9 @@ export class Engine{
                     create buffers, attatch to object
                 create model view matrix from object transform and camera transform
                 set buffer attributes
-                draw elements          
+                draw elements         
+            If skybox:
+
         */
         Render.gl.clear(Render.gl.COLOR_BUFFER_BIT | Render.gl.DEPTH_BUFFER_BIT);
         scene.gameObjectArray.forEach((gameObject) => {
@@ -59,10 +61,30 @@ export class Engine{
                 modelViewMatrix,
                 projectionMatrix,
                 vertexCount,
-                gameObject.texture!
+                gameObject.texture!,
+                true
             )
-            
         })
+
+        if (scene.skybox !== null) {
+            // Skybox
+            // Init skybox buffer
+            // Create skybox texture
+            // Compute projection and view matrix
+            // Call drawSkyboxBuffers
+            let skyboxPositionBuffer = InitBuffers.initSkyboxPositionBuffer(Render.gl);
+            let skyboxTexture = scene.skybox.texture;
+            let projectionMatrix = Render.createProjectionMatrix(camera.fov);
+            let viewMatrix = Render.createViewMatrix(vec3.fromValues(0,0,0), vec3.fromValues(camera.pitch, camera.heading, 0));
+            Render.drawSkyboxBuffers(
+                Render.skyboxProgramInfo,
+                skyboxPositionBuffer,
+                viewMatrix,
+                projectionMatrix,
+                skyboxTexture
+            )
+        }
+
     }
 
 }
@@ -83,8 +105,10 @@ export class Camera {
 
 export class Scene {
     gameObjectArray: GameObject[]
+    skybox: Skybox | null
     constructor() {
         this.gameObjectArray = [];
+        this.skybox = null;
     }
 
     addGameObject(gameObject: GameObject) {
@@ -93,6 +117,18 @@ export class Scene {
 
     addGameObjects(gameObjects: GameObject[]) {
         this.gameObjectArray.push(...gameObjects);
+    }
+
+    addSkybox(skybox: Skybox) {
+        this.skybox = skybox;
+    }
+}
+
+export class Skybox {
+    texture: WebGLTexture
+    constructor() {
+        let skyboxTexture = Render.cubeMapTexture([]); 
+        this.texture = skyboxTexture;
     }
 }
 
@@ -213,6 +249,7 @@ export class GameObject {
             this.camera!.pos = pos;
     
         }
+
 }
 
 export class PlaneCollider {
@@ -352,20 +389,32 @@ export class Transform {
         this.centre = vec3.fromValues(0,0,0);
     }
 
-    set(pos?: vec3, scale?: vec3, rotate?: vec3) {
-        if (pos !== undefined) {
-            this.pos = pos;
-        }
-        if (scale !== undefined) {
-            if (scale[0] == 0 || scale[1] == 0 || scale[2] == 0) {
+    setPos(pos: vec3) {
+        this.pos = pos;
+    }
+
+    setScale(scale: vec3) {
+        if (scale[0] == 0 || scale[1] == 0 || scale[2] == 0) {
                 scale = vec3.fromValues(1,1,1);
                 console.log("Scale has a zero!")
             } else {
                 this.scale = scale;
             }
+    }
+
+    setRotate(rotate: vec3) {
+        this.rotate = rotate;
+    }
+
+    set(pos?: vec3, scale?: vec3, rotate?: vec3) {
+        if (pos !== undefined) {
+            this.setPos(pos);
+        }
+        if (scale !== undefined) {
+            this.setScale(scale);
         }
         if (rotate !== undefined) {
-            this.rotate = rotate;
+            this.setRotate(rotate);
         }
         return this;
     }
@@ -478,5 +527,14 @@ export class Mesh {
         let faceColourArray: number[] = Array().concat(c, c, c, c);
         let mesh = new Mesh(vertexArray, indexArray, faceColourArray, textureCoordArray);
         return mesh;
+    }
+
+        static union(m1: Mesh, m2: Mesh): Mesh {
+        let vertexArray = m1.vertexArray.concat(m2.vertexArray);
+        let indexOffset = m1.vertexArray.length / 3;
+        let indexArray = m1.indexArray.concat(m2.indexArray.map(i => i + indexOffset));
+        let faceColourArray = m1.faceColourArray.concat(m2.faceColourArray);
+        let textureCoordArray = m1.textureCoordArray.concat(m2.textureCoordArray);
+        return new Mesh(vertexArray, indexArray, faceColourArray, textureCoordArray);
     }
 }
