@@ -1,5 +1,6 @@
 {
   "name": "gl-matrix-test",
+  "homepage": "https://luiginotcool.github.io/LsdGameEngine-ts/",
   "scripts": {
     "build": "vite build",
     "start": "vite",
