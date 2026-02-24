@@ -214,6 +214,7 @@ export class GameObject {
             this.camera!.pos = pos;
     
         }
+
 }
 
 export class PlaneCollider {

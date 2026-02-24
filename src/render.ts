@@ -78,7 +78,7 @@ export class Render {
         //Render.buffers = Buffer.initBuffers(gl);
 
         // Load texture
-        Render.texture = Render.loadTexture("cubetexture.png");
+        //Render.texture = Render.loadTexture("cubetexture.png");
         // Flip image pixels into the bottom-to-top order that WebGL expects.
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
@@ -293,7 +293,7 @@ export class Render {
         // Clear the canvas before we start drawing on it.
 
         
-        console.log("CLEAR")
+        //console.log("CLEAR")
 
  
 
