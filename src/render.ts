@@ -303,7 +303,7 @@ export class Render {
             target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
             url: '/neg_z.png',
             },
-        ];
+        ]; // test
         faceInfos.forEach((faceInfo) => {
             const {target, url} = faceInfo;
 
