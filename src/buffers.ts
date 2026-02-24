@@ -1,3 +1,5 @@
+import { SkyboxBuffers } from "./types";
+
 export class InitBuffers {
     static initBuffers(gl: WebGLRenderingContext, vertexArray: number[], indexArray: number[], textureCoordArray: number[]) {
         const positionBuffer = InitBuffers.initPositionBuffer(gl, vertexArray);
@@ -87,4 +89,22 @@ export class InitBuffers {
         );
         return textureCoordBuffer;
     }
+
+    static initSkyboxPositionBuffer(gl: WebGLRenderingContext): SkyboxBuffers {
+        let skyboxPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, skyboxPositionBuffer);
+        var positions = new Float32Array(
+            [
+            -1, -1, 
+            1, -1, 
+            -1,  1, 
+            -1,  1,
+            1, -1,
+            1,  1,
+            ]);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+        return {position: skyboxPositionBuffer};
+    }
+
+
 }

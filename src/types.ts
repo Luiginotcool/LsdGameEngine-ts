@@ -11,10 +11,30 @@ export type ProgramInfo = {
     };
 };
 
+export type SkyboxProgramInfo = {
+    program: WebGLProgram;
+    attribLocations: {
+        vertexPosition: number;
+    };
+    uniformLocations: {
+        uSkybox: WebGLUniformLocation | null;
+        uViewDirectionProjectionInverse: WebGLUniformLocation | null;
+    };
+};
+
+export type FaceInfo = {
+    target: number;
+    url: string;
+}
+
 export type Buffers = {
     position: WebGLBuffer,
     textureCoord: WebGLBuffer,
     indices: WebGLBuffer,
+}
+
+export type SkyboxBuffers = {
+    position: WebGLBuffer,
 }
 
 export type DebugText = {

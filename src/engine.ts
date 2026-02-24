@@ -17,7 +17,9 @@ export class Engine{
                     create buffers, attatch to object
                 create model view matrix from object transform and camera transform
                 set buffer attributes
-                draw elements          
+                draw elements         
+            If skybox:
+
         */
         Render.gl.clear(Render.gl.COLOR_BUFFER_BIT | Render.gl.DEPTH_BUFFER_BIT);
         scene.gameObjectArray.forEach((gameObject) => {
@@ -62,8 +64,27 @@ export class Engine{
                 gameObject.texture!,
                 true
             )
-            
         })
+
+        if (scene.skybox !== null) {
+            // Skybox
+            // Init skybox buffer
+            // Create skybox texture
+            // Compute projection and view matrix
+            // Call drawSkyboxBuffers
+            let skyboxPositionBuffer = InitBuffers.initSkyboxPositionBuffer(Render.gl);
+            let skyboxTexture = scene.skybox.texture;
+            let projectionMatrix = Render.createProjectionMatrix(camera.fov);
+            let viewMatrix = Render.createViewMatrix(vec3.fromValues(0,0,0), vec3.fromValues(camera.pitch, camera.heading, 0));
+            Render.drawSkyboxBuffers(
+                Render.skyboxProgramInfo,
+                skyboxPositionBuffer,
+                viewMatrix,
+                projectionMatrix,
+                skyboxTexture
+            )
+        }
+
     }
 
 }
@@ -84,8 +105,10 @@ export class Camera {
 
 export class Scene {
     gameObjectArray: GameObject[]
+    skybox: Skybox | null
     constructor() {
         this.gameObjectArray = [];
+        this.skybox = null;
     }
 
     addGameObject(gameObject: GameObject) {
@@ -94,6 +117,18 @@ export class Scene {
 
     addGameObjects(gameObjects: GameObject[]) {
         this.gameObjectArray.push(...gameObjects);
+    }
+
+    addSkybox(skybox: Skybox) {
+        this.skybox = skybox;
+    }
+}
+
+export class Skybox {
+    texture: WebGLTexture
+    constructor() {
+        let skyboxTexture = Render.cubeMapTexture([]); 
+        this.texture = skyboxTexture;
     }
 }
 

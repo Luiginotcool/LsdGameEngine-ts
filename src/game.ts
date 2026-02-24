@@ -1,5 +1,5 @@
 import { vec3 } from "gl-matrix";
-import { Camera, Engine, GameObject, Mesh, Scene, Transform } from "./engine";
+import { Camera, Engine, GameObject, Mesh, Scene, Skybox, Transform } from "./engine";
 import { Render } from "./render";
 import { Globals } from "./types";
 import { Maze } from "./maze";
@@ -72,6 +72,7 @@ export class Game {
         // Scene
         scene.addGameObjects([room, player, cube])
         Game.player = player;
+        scene.addSkybox(new Skybox());
 
         return scene;
     }
