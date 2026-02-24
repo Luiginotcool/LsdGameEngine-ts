@@ -1,3 +1,4 @@
+import { Game } from "./game.js";
 import { Vec3 } from "./math.js";
 import { Input } from "./input.js";
 export class Engine {
@@ -13,9 +14,22 @@ export class Camera {
 export class Scene {
     constructor() {
         this.gameObjectArray = [];
+        this.physicsSystemArray = [];
     }
     addGameObject(gameObject) {
+        //gameObject.id = this.gameObjectArray.length;
         this.gameObjectArray.push(gameObject);
+    }
+    addPhysicsSystem(physicsSystem) {
+        this.physicsSystemArray.push(physicsSystem);
+    }
+    update(dt) {
+        this.physicsSystemArray.forEach(ps => {
+            let psBodyArray = ps.update(dt);
+        });
+        this.gameObjectArray.forEach(gameObject => {
+            gameObject.update(dt);
+        });
     }
 }
 export class GameObject {
@@ -25,6 +39,7 @@ export class GameObject {
         this.controller = null;
         this.camera = null;
         this.body = null;
+        this.id = -1;
     }
     update(dt) {
         if (this.hasController()) {
@@ -99,19 +114,53 @@ export class GameObject {
     }
 }
 export class PlaneCollider {
-    constructor() {
+    constructor(planeType = PlaneCollider.AXIS, pos, dim) {
         this.type = "PlaneCollider";
+        this.planeType = planeType;
+        this.pos = pos;
+        this.dim = dim;
+        this.transform = new Transform();
+    }
+    collides(_collider) {
+        if (_collider.type == "PlaneCollider") {
+            let collider = _collider;
+        }
+        if (_collider.type == "BoxCollider") {
+            let collider = _collider;
+        }
+    }
+    showCollider(render, camera) {
+        let scene = new Scene();
+        let bboxObj = new GameObject();
+        bboxObj.mesh = Mesh.cube();
+        bboxObj.transform.scale = this.dim.scale(1);
+        bboxObj.transform.scale.y = 0.1;
+        bboxObj.transform.pos = this.pos;
+        scene.addGameObject(bboxObj);
+        render.drawScene(scene, camera, true);
     }
 }
+PlaneCollider.AXIS = 0;
+PlaneCollider.POINTS = 1;
 export class BoxCollider {
-    constructor(pos, dim) {
+    constructor(pos, dim, rot = Vec3.zero()) {
         this.pos = pos; // -ve axis corner
-        this.dim = dim;
+        this.dim = dim; // center to side length
+        this.transform = new Transform();
         this.type = "BoxCollider";
     }
     collides(_collider) {
         if (_collider.type == "PlaneCollider") {
             let collider = _collider;
+            let p1 = this.pos;
+            let p2 = this.pos.add(this.dim);
+            let q1 = collider.pos.add(collider.dim.scale(-1));
+            let q2 = collider.pos.add(collider.dim);
+            q1.y = collider.pos.y;
+            q2.y = collider.pos.y;
+            return (BoxCollider.intervalOverlap(p1.x, p2.x, q1.x, q2.x) &&
+                BoxCollider.intervalOverlap(p1.y, p2.y, q1.y, q2.y) &&
+                BoxCollider.intervalOverlap(p1.z, p2.z, q1.z, q2.z));
         }
         if (_collider.type == "BoxCollider") {
             let collider = _collider;
@@ -137,39 +186,176 @@ export class BoxCollider {
         let scene = new Scene();
         let bboxObj = new GameObject();
         bboxObj.mesh = Mesh.cube();
-        bboxObj.transform.scale = this.dim.scale(1 / 2 + 0.01);
-        bboxObj.transform.pos = this.pos;
+        bboxObj.transform.scale = this.dim.scale(1.01);
+        bboxObj.transform.pos = this.pos.add(this.transform.pos);
+        bboxObj.transform.rotate = this.transform.rotate;
+        console.log("THis colliders position is ", this.pos);
         scene.addGameObject(bboxObj);
         render.drawScene(scene, camera, true);
     }
 }
+export class PhysicsSystem {
+    constructor() {
+        this.bodyArray = [];
+    }
+    addBody(body) {
+        if (!body.hasBody()) {
+            return false;
+        }
+        this.bodyArray.push(body);
+    }
+    update(dt) {
+        this.bodyArray.forEach(body => {
+            body.body.update(dt);
+            body.body.collider.transform = body.transform;
+        });
+        this.handleCollisions();
+        return this.bodyArray;
+    }
+    drawColliders(render, camera) {
+        this.bodyArray.forEach(gameObject => {
+            if (!gameObject.hasBody()) {
+                return;
+            }
+            if (!gameObject.body.hasCollider()) {
+                return;
+            }
+            gameObject.body.collider.showCollider(render, camera);
+        });
+    }
+    planeLineIntersect(p1, p2, a, n) {
+        let d = a.dot(n);
+        let lambda = (d - n.dot(p1)) / (n.dot(p2.subtract(p1)));
+        let intersect = p1.add(p2.subtract(p1).scale(lambda));
+        //console.log(d - n.dot(p1), (p1.dot(new Vec3(-1, 1, 1)) + p2.dot(new Vec3(1, -1, -1))))
+        return [intersect, lambda];
+    }
+    normalVectorFromPoints(a, b, c) {
+        let det = (b.x * c.y - b.y * c.x);
+        let nz = det;
+        let nx = (b.y * c.z - b.z * c.y);
+        let ny = (b.z * c.x - b.x * c.z);
+        return new Vec3(nx, ny, nz);
+    }
+    collideBoxBox(box1, box2) {
+        console.log("Box Box collision");
+    }
+    collidePlanePlane(plane1, plane2) {
+        console.log("Plane Plane collision");
+    }
+    collideBoxPlane(box, plane) {
+        console.log("Box Plane collision");
+        let p1 = new Vec3(2, 2, 2);
+        let p2 = new Vec3(1, -1, 3);
+        let n = this.normalVectorFromPoints(new Vec3(0, 0, 0), new Vec3(1, 0, 1), new Vec3(2, 0, 1));
+        let a = new Vec3(1, 0, 1);
+        let [intersect, lambda] = this.planeLineIntersect(p1, p2, a, n);
+        //console.log(intersect);
+        let render = Game.render;
+        let cam = Game.globals.player.camera;
+        render.drawPoint(intersect, cam);
+        render.drawPoint(p1, cam, Colour.WHITE);
+        render.drawPoint(p2, cam, Colour.WHITE);
+        render.drawVector(p1, p2, cam, Colour.RED);
+        render.drawVector(a, a.add(n), cam, Colour.CYAN);
+        // START OF COLLISION CODE
+        // Get centre of collision point
+        // If the box is moving, move backwards along that vector until
+        // there is no collision
+        // For each edge on the cube
+        //      write as vector equation
+        //      solve equation using plane eq
+        //      if collision is inside all bounds:
+        //          note the point down
+        // calculate the average point
+    }
+    handleCollisions() {
+        for (let i = 0; i < this.bodyArray.length; i++) {
+            if (!this.bodyArray[i].hasBody()) {
+                continue;
+            }
+            let body = this.bodyArray[i].body;
+            if (body.hasCollider()) {
+                for (let j = i + 1; j < this.bodyArray.length; j++) {
+                    if (!this.bodyArray[j].hasBody()) {
+                        continue;
+                    }
+                    let cbody = this.bodyArray[j].body;
+                    this.collideBoxPlane(this.bodyArray[i], this.bodyArray[j]);
+                    if (cbody.hasCollider()) {
+                        console.log(body.collider.type + " " + cbody.collider.type);
+                        if (body.collider.collides(cbody.collider)) {
+                            console.log(body.collider, cbody.collider);
+                            let types = body.collider.type + " " + cbody.collider.type;
+                            switch (types) {
+                                case "BoxCollider BoxCollider":
+                                    this.collideBoxBox(this.bodyArray[i], this.bodyArray[j]);
+                                    break;
+                                case "BoxCollider PlaneCollider":
+                                    this.collideBoxPlane(this.bodyArray[i], this.bodyArray[j]);
+                                    break;
+                                case "PlaneCollider BoxCollider":
+                                    this.collideBoxPlane(this.bodyArray[j], this.bodyArray[i]);
+                                    break;
+                                case "PlaneCollider PlaneCollider":
+                                    this.collidePlanePlane(this.bodyArray[i], this.bodyArray[j]);
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+export class Colour {
+    constructor(r = 0, g = 0, b = 0) {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+    }
+}
+Colour.RED = new Colour(1, 0, 0);
+Colour.GREEN = new Colour(0, 1, 0);
+Colour.BLUE = new Colour(0, 0, 1);
+Colour.CYAN = new Colour(0, 1, 1);
+Colour.YELLOW = new Colour(1, 1, 0);
+Colour.MAGENTA = new Colour(1, 0, 1);
+Colour.BLACK = new Colour(0, 0, 0);
+Colour.WHITE = new Colour(1, 1, 1);
 export class Body {
-    constructor(pos) {
+    constructor(pos, mass = 1) {
         this.collider = null;
         this.pos = pos;
         this.vel = Vec3.zero();
         this.acc = Vec3.zero();
+        this.mass = mass;
+        this.impulse = Vec3.zero();
     }
     update(dt) {
         if (this.hasCollider()) {
+            // Check if this is colliding with any other colliders
+            // if it is, move it away
         }
         if (Number.isNaN(dt)) {
             dt = 1;
         }
-        console.log("The velocity of the body", this.vel.add(this.acc.scale(dt)));
-        this.vel = this.vel.add(this.acc.scale(dt));
-        this.pos = this.pos.add(this.vel.scale(dt));
+        this.acc = this.impulse.scale(1 / this.mass);
+        this.vel = this.vel.add(this.acc.scale(dt / 1000));
+        this.pos = this.pos.add(this.vel.scale(dt / 1000));
         if (this.hasCollider()) {
-            this.collider.pos = this.pos;
+            //this.collider!.pos = this.pos
         }
+        this.impulse = Vec3.zero();
         //this.bbox.pos = this.pos
-    }
-    collide(obj) {
-        if (obj.hasBody()) {
-        }
     }
     hasCollider() {
         return (this.collider !== null);
+    }
+    gravity(g) {
+        let gravityForce = Vec3.zero();
+        gravityForce.y = -this.mass * g;
+        return gravityForce;
     }
 }
 export class Controller {
@@ -201,6 +387,8 @@ export class Transform {
         this.scale = scale;
         this.rotate = rotate;
         return this;
+    }
+    transform(t) {
     }
 }
 export class Mesh {
@@ -280,10 +468,10 @@ export class Mesh {
     }
     static plane() {
         let vertexArray = [
-            -1.2, 0.0, -1.2,
-            1.2, 0.0, -1.2,
-            1.2, 0.0, 1.2,
-            -1.2, 0.0, 1.2
+            -1, 0.0, -1,
+            1, 0.0, -1,
+            1, 0.0, 1,
+            -1, 0.0, 1
         ];
         let indexArray = [
             0, 1, 2, 0, 2, 3

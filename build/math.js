@@ -191,6 +191,9 @@ export class Vec3 {
         }
         return new Vec3(0, 0, 0); // Prevent divide by zero
     }
+    dot(v) {
+        return v.x * this.x + v.y * this.y + v.z * this.z;
+    }
     static random(range, offset) {
         let randomVec = new Vec3(Math.random() * range.x, Math.random() * range.y, Math.random() * range.z).add(offset).subtract(range.scale(1 / 2));
         return randomVec;
@@ -200,6 +203,20 @@ export class Vec3 {
     }
     static one() {
         return new Vec3(1, 1, 1);
+    }
+    transform(t) {
+        let c = t.centre;
+        let s = t.scale;
+        let p = t.pos;
+        let r = t.rotate;
+        let out = this.scale(1);
+        out = out.subtract(c);
+        out = out.rotateAroundAxis([1, 0, 0], r.x);
+        out = out.rotateAroundAxis([0, 1, 0], r.y);
+        out = out.rotateAroundAxis([0, 0, 1], r.z);
+        out = new Vec3(out.x * s.x, out.y * s.y, out.z * s.z);
+        out = out.add(c).add(p);
+        return out;
     }
     rotateAroundAxis(axis, angle) {
         // Angle in radians

@@ -1,4 +1,4 @@
-import { Camera, Body, GameObject, Mesh, Scene, Transform, BoxCollider } from "./engine.js";
+import { Camera, Body, GameObject, Mesh, Scene, Transform, BoxCollider, PhysicsSystem, PlaneCollider, Colour } from "./engine.js";
 import { Input } from "./input.js";
 import { Vec3 } from "./math.js";
 export class Game {
@@ -21,34 +21,91 @@ export class Game {
         let box1 = new GameObject();
         let box2 = new GameObject();
         let player = new GameObject();
+        let ps = new PhysicsSystem();
         player = new GameObject();
         player.camera = new Camera(0, 0, 0, 0, 0, 60);
         player.transform.set(new Vec3(0, 2, 4));
         plane.mesh = Mesh.plane();
         plane.transform.set(undefined, new Vec3(10, 1, 10), undefined);
+        plane.body = new Body(plane.transform.pos, 1);
+        plane.body.collider = new PlaneCollider(0, plane.transform.pos, plane.transform.scale);
         box1.mesh = Mesh.cube();
-        box1.transform.set(new Vec3(-1, 4, -3));
+        box1.transform.set(new Vec3(3, 0, 0), Vec3.one(), new Vec3(this.frames, 0, 0));
         box1.body = new Body(box1.transform.pos);
-        box1.body.collider = new BoxCollider(box1.transform.pos, new Vec3(2, 2, 2));
-        box1.body.acc = new Vec3(0, -0.0001, 0);
+        box1.body.collider = new BoxCollider(Vec3.zero(), Vec3.one(), Vec3.zero());
+        box1.body.mass = 1;
+        //box1.body.impulse = box1.body.gravity(0.0001);
         box2.mesh = Mesh.cube();
         box2.transform.set(new Vec3(-1, 2, -5));
+        ps.addBody(box1);
+        ps.addBody(plane);
         scene.addGameObject(plane);
         scene.addGameObject(box1);
+        scene.addPhysicsSystem(ps);
         //scene.addGameObject(box2);
         this.globals.scene = scene;
         this.globals.player = player;
     }
     static collides_loop(dt) {
-        var _a, _b;
         let player = this.globals.player;
         let scene = this.globals.scene;
         let box = scene.gameObjectArray[1];
+        let body = box.body;
         let camera = player.camera;
+        let ps = scene.physicsSystemArray[0];
         player.handleInput(dt);
-        this.render.drawScene(scene, camera);
-        (_b = (_a = box.body) === null || _a === void 0 ? void 0 : _a.collider) === null || _b === void 0 ? void 0 : _b.showCollider(this.render, camera);
-        box.update(dt);
+        if (Input.keys.p) {
+            body.impulse = body.impulse.add(new Vec3(0, 0, 10));
+        }
+        box.transform.rotate = new Vec3(Game.frames / 1000, 0, Game.frames * 0);
+        //body.impulse = body.impulse.add(body.gravity(9.8));
+        this.render.clearScene();
+        if (!box.hasMesh()) {
+            return;
+        }
+        let mesh = box.mesh;
+        let edgeList = [];
+        let col = box.body.collider;
+        let pos1 = col.pos;
+        console.log("the posiiton of the collider is ", col.transform, pos1, box.transform);
+        let dim = box.body.collider.dim;
+        let pos = pos1.subtract(dim);
+        let pos2 = pos1.add(dim);
+        let dx = new Vec3(2 * dim.x, 0, 0);
+        let dy = new Vec3(0, 2 * dim.y, 0);
+        let dz = new Vec3(0, 0, 2 * dim.z);
+        let vertecies = [
+            pos, pos.add(dx), pos.add(dy), pos.add(dz),
+            pos2, pos2.subtract(dx), pos2.subtract(dy), pos2.subtract(dz)
+        ];
+        vertecies = vertecies.map(v => { return v.transform(col.transform); });
+        console.log(vertecies, col.transform);
+        //console.log("col transform", box.body?.collider?.transform)
+        edgeList = [
+            [vertecies[0], vertecies[1]],
+            [vertecies[0], vertecies[2]],
+            [vertecies[0], vertecies[3]],
+            [vertecies[1], vertecies[7]],
+            [vertecies[1], vertecies[6]],
+            [vertecies[2], vertecies[7]],
+            [vertecies[2], vertecies[5]],
+            [vertecies[3], vertecies[5]],
+            [vertecies[3], vertecies[6]],
+            [vertecies[4], vertecies[5]],
+            [vertecies[4], vertecies[7]],
+            [vertecies[4], vertecies[6]]
+        ];
+        //console.log(edgeList.length)
+        edgeList.forEach(edge => {
+            Game.render.drawVector(edge[0], edge[1], camera, Colour.BLUE);
+        });
+        //Game.render.drawVector(edgeList[0][0], edgeList[0][1], camera, Colour.BLUE)
+        //this.render.drawPoint(new Vec3(1, 1, 1), camera);
+        //this.render.drawVector(Vec3.zero(), new Vec3(2, 2, 2), camera);
+        //this.render.drawScene(scene, camera!, false, false)
+        ps.drawColliders(this.render, camera);
+        //box.update(dt);
+        scene.update(dt);
     }
     static planeBox_setup() {
         this.globals.player = new GameObject();

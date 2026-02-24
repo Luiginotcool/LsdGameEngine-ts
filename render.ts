@@ -1,4 +1,4 @@
-import { Camera, GameObject, Scene, Mesh } from "./engine.js";
+import { Camera, GameObject, Scene, Mesh, Colour } from "./engine.js";
 import { Game } from "./game.js";
 import { Mat4, Vec3 } from "./math.js";
 
@@ -34,7 +34,7 @@ export class Render {
 
     constructor(gl: WebGLRenderingContext, public width: number, public height: number) {
         this.gl = gl;
-        this.debug = true;
+        this.debug = false;
         let shaderProgram = this.initShaderProgram(this.vsSource, this.fsSource);
 
         if (shaderProgram === null) {
@@ -216,6 +216,7 @@ export class Render {
             let s: Vec3 = gameObject.transform!.scale;
             let r: Vec3 = gameObject.transform!.rotate;
             let p: Vec3 = gameObject.transform!.pos;
+            //console.log(r)
             s.x = s.x == 0 ? 0.01 : s.x;
             s.y = s.y == 0 ? 0.01 : s.y;
             s.z = s.z == 0 ? 0.01 : s.z;
@@ -276,7 +277,7 @@ export class Render {
 
 
     
-    drawScene(scene: Scene, camera: Camera, wireframe: boolean = false) {
+    drawScene(scene: Scene, camera: Camera, wireframe: boolean = false, _clear: boolean = true) {
         // Clear screen
         // Create the buffers for the scene
         // Create the view matrix
@@ -299,7 +300,7 @@ export class Render {
 
 
 
-        if (!wireframe) {
+        if (_clear && !wireframe) {
             this.clear(0, 0, 0, 1);
         }
 
@@ -360,6 +361,62 @@ export class Render {
             //console.log(vertexCount)
         }
     }
+
+    drawVector(origin: Vec3, v: Vec3, camera: Camera, colour: Colour = Colour.RED) {
+        let vectorObj = new GameObject();
+        let scene = new Scene();
+        let e = 0.01
+        let vertexArray = [
+            origin.x-e, origin.y-e, origin.z-e,  //0
+            origin.x+e, origin.y-e, origin.z-e,  //1
+            origin.x+e, origin.y-e, origin.z+e,  //2
+            origin.x-e, origin.y-e, origin.z+e,  //3
+        
+            v.x-e, v.y+e, v.z-e,                 //4
+            v.x+e, v.y+e, v.z-e,                 //5
+            v.x+e, v.y+e, v.z+e,                 //6
+            v.x-e, v.y+e, v.z+e,                 //7
+        ]
+        let indexArray = [
+            0, 1, 2, 0, 2, 3, // bottom
+            0, 4, 5, 0, 5, 1, // front
+            0, 4, 7, 0, 3, 7, // left
+            6, 7, 5, 6, 5, 4, // top
+            6, 7, 3, 6, 3, 2, // back
+            6, 2, 1, 6, 1, 5, // right
+        ];
+        let faceColourArray: number[] = [];
+        for (let i = 0; i < 6; i++) {
+            let c = [colour.r, colour.g, colour.b, 1.0]
+            faceColourArray = faceColourArray.concat(c, c, c, c)
+        }
+        vectorObj.mesh = new Mesh(vertexArray, indexArray, faceColourArray);
+        scene.addGameObject(vectorObj);
+        this.drawScene(scene, camera, false, false);
+    }
+
+    drawPoint(v: Vec3, camera: Camera, colour: Colour = Colour.YELLOW) {
+        let pointObj = new GameObject();
+        let scene = new Scene();
+        let e = 0.08;
+
+        let faceColourArray: number[] = [];
+        for (let i = 0; i < 6; i++) {
+            let c = [colour.r, colour.g, colour.b, 1.0]
+            faceColourArray = faceColourArray.concat(c, c, c, c)
+        }
+
+        pointObj.mesh = Mesh.cube();
+        pointObj.mesh.faceColourArray = faceColourArray;
+        pointObj.transform.set(v, Vec3.one().scale(e));
+        scene.addGameObject(pointObj);
+        this.drawScene(scene, camera, false, false);
+    }
+
+    clearScene(r: number = 0.0, g: number = 0.0, b: number = 0.0) {
+        this.clear(r, g, b, 1);
+    }
+    
 
     initBuffers(scene: Scene) {
         let gl = this.gl;
