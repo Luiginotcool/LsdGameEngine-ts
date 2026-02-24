@@ -2,13 +2,16 @@
   "name": "gl-matrix-test",
   "scripts": {
     "build": "vite build",
-    "start": "vite"
+    "start": "vite",
+    "dev": "vite",
+    "deploy": "gh-pages -d dist"
   },
   "license": "ISC",
   "dependencies": {
     "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
+    "gh-pages": "^6.3.0",
     "typescript": "^5.2.2",
     "vite": "6"
   }
