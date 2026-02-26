@@ -57,7 +57,7 @@ export class Game {
         let roomDim = vec3.fromValues(8, 3, 15);
         room = this.room(roomCentre, roomDim);
 
-        room.texture = Render.loadTexture("public/bg.png");
+        room.texture = Render.loadTexture("/bg.png");
 
         // Player
         player.camera = new Camera(0, 0, 0, 0, 0, 45);
@@ -67,7 +67,7 @@ export class Game {
         // Cube
         cube.mesh = Mesh.cube();
         cube.transform.set(vec3.fromValues(-2, -1, -5))
-        cube.texture = Render.loadTexture("public/cubetexture.png")
+        cube.texture = Render.loadTexture("/cubetexture.png")
 
         // Scene
         scene.addGameObjects([room, player, cube])
