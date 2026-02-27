@@ -33,7 +33,8 @@ export class App {
         }
         let overlay = document.getElementById("overlay");
         if (overlay !== null) {
-            this.overlay = overlay as HTMLDivElement;
+            App.overlay = overlay as HTMLDivElement;
+            console.log(overlay)
         }
 
         
@@ -56,9 +57,11 @@ export class App {
             App.frames++;
             Input.mouseLocked = (document.pointerLockElement === App.canvas);
 
+            let pos = Game.scenes[0].gameObjects.player.transform.pos
             let debugString = {
                 "Fps": fps,
-                "mouseX": Input.mouseX
+                "mouseX": Input.mouseX,
+                "pos": pos[0] + ", " + pos[1] + ", " + pos[2],
             }
             App.displayDebug(debugString)
     

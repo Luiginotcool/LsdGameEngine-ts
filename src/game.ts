@@ -3,6 +3,8 @@ import { Camera, Engine, GameObject, Mesh, Scene, Skybox, Transform } from "./en
 import { Render } from "./render";
 import { Globals } from "./types";
 import { Maze } from "./maze";
+import { TestScene } from "./scenes/testScene";
+import { Downhill } from "./scenes/downhill";
 
 
 export class Game {
@@ -36,43 +38,19 @@ export class Game {
 
         let scene = Game.scenes[0];
         let player = Game.player;
-        player.handleInput(dt);
-        let cube = scene.gameObjectArray[2];
-        cube.transform.rotate = vec3.fromValues(0, Game.frames/100, 0)
-        cube.transform.setPos(vec3.fromValues(-2, -1 + 0.5*Math.sin(Game.frames/25), -5))
-
+        scene.update(dt, Game.frames);
         Engine.drawScene(scene, player.camera!)
     }
 
     static createScene() {
         // Scene with a floor, walls and a cube
-        let scene = new Scene();
-        let room = new GameObject();
-        let cube = new GameObject();
-        let player = new GameObject();
+        let scene = new Downhill();
+        scene.init();
+        Game.player = scene.gameObjects.player
 
-
-        // Room
-        let roomCentre = vec3.fromValues(-2, -1, -5);
-        let roomDim = vec3.fromValues(8, 3, 15);
-        room = this.room(roomCentre, roomDim);
-
-        room.texture = Render.loadTexture("/bg.png");
-
-        // Player
-        player.camera = new Camera(0, 0, 0, 0, 0, 45);
-        player.transform.set(vec3.fromValues(0, 0, 4));
-        
-
-        // Cube
-        cube.mesh = Mesh.cube();
-        cube.transform.set(vec3.fromValues(-2, -1, -5))
-        cube.texture = Render.loadTexture("/cubetexture.png")
-
-        // Scene
-        scene.addGameObjects([room, player, cube])
-        Game.player = player;
-        scene.addSkybox(new Skybox());
+        for (let key in scene.gameObjects) {
+            console.log(key)
+        }
 
         return scene;
     }
@@ -90,7 +68,7 @@ export class Game {
         let wallPos = centre;
         let wallScale = dim;
 
-       let wall = new GameObject();
+       let wall = new GameObject("room");
        wall.mesh = Mesh.cube();
        wall.transform = new Transform();
        wall.transform.set(wallPos, wallScale);

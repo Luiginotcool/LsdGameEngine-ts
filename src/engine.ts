@@ -4,6 +4,7 @@ import { Input } from "./input.js";
 import { Render } from "./render.js";
 import { Buffers, keyFunctions } from "./types.js";
 import { InitBuffers } from "./buffers.js";
+import { TextureManager } from "./textureManager.js";
 
 export class Engine{
 
@@ -22,10 +23,13 @@ export class Engine{
 
         */
         Render.gl.clear(Render.gl.COLOR_BUFFER_BIT | Render.gl.DEPTH_BUFFER_BIT);
-        scene.gameObjectArray.forEach((gameObject) => {
+        for (let key in scene.gameObjects) {
+            let gameObject = scene.gameObjects[key]
             if (!gameObject.hasMesh()) {
-                return;
+                console.log(key, " skipped")
+                continue;
             } 
+            //console.log(key)
             if (!gameObject.hasBuffers()) {
                 // If no buffers, create buffers
                 let mesh = gameObject.mesh!
@@ -64,7 +68,7 @@ export class Engine{
                 gameObject.texture!,
                 true
             )
-        })
+        }
 
         if (scene.skybox !== null) {
             // Skybox
@@ -104,19 +108,25 @@ export class Camera {
 
 
 export class Scene {
-    gameObjectArray: GameObject[]
+    gameObjects: {[key: string]: GameObject}
     skybox: Skybox | null
     constructor() {
-        this.gameObjectArray = [];
+        this.gameObjects = {};
         this.skybox = null;
     }
 
+    update(dt: number, t: number) {
+
+    }
+
     addGameObject(gameObject: GameObject) {
-        this.gameObjectArray.push(gameObject);
+        this.gameObjects[gameObject.id] = gameObject;
     }
 
     addGameObjects(gameObjects: GameObject[]) {
-        this.gameObjectArray.push(...gameObjects);
+        gameObjects.forEach(gameObject => {
+            this.gameObjects[gameObject.id] = gameObject;
+        })
     }
 
     addSkybox(skybox: Skybox) {
@@ -133,6 +143,7 @@ export class Skybox {
 }
 
 export class GameObject {
+    id: string;
     mesh: Mesh | null
     transform: Transform
     controller: Controller | null
@@ -140,7 +151,8 @@ export class GameObject {
     body: Body | null
     buffers: Buffers | null
     texture: WebGLTexture | null
-    constructor() {
+    constructor(id: string) {
+        this.id = id;
         this.mesh = null;
         this.transform = new Transform();
         this.controller = null;
@@ -183,6 +195,14 @@ export class GameObject {
 
     hasTexture() {
         return this.texture !== null;
+    }
+
+    setTexture(url: string) {
+        this.texture = TextureManager.loadTexture(url)
+    }
+
+    setColourTexture(r: number, g: number, b: number) {
+        this.texture = TextureManager.colourTexture(r, g, b);
     }
 
     handleInput(dt: number) {
@@ -304,7 +324,7 @@ export class BoxCollider {
 
     showCollider(render: Render, camera: Camera) {
         let scene = new Scene();
-        let bboxObj = new GameObject();
+        let bboxObj = new GameObject("");
         bboxObj.mesh = Mesh.cube();
         bboxObj.transform.scale = vec3.scale(this.dim, this.dim, 1/2 + 0.01 );
         bboxObj.transform.pos = this.pos;
@@ -389,11 +409,12 @@ export class Transform {
         this.centre = vec3.fromValues(0,0,0);
     }
 
-    setPos(pos: vec3) {
-        this.pos = pos;
+    setPos(x: number, y: number, z: number) {
+        this.pos = vec3.fromValues(x,y,z);
     }
 
-    setScale(scale: vec3) {
+    setScale(x: number, y: number, z: number) {
+        let scale = vec3.fromValues(x,y,z);
         if (scale[0] == 0 || scale[1] == 0 || scale[2] == 0) {
                 scale = vec3.fromValues(1,1,1);
                 console.log("Scale has a zero!")
@@ -402,19 +423,19 @@ export class Transform {
             }
     }
 
-    setRotate(rotate: vec3) {
-        this.rotate = rotate;
+    setRotate(x: number, y: number, z: number) {
+        this.rotate = vec3.fromValues(x,y,z);
     }
 
     set(pos?: vec3, scale?: vec3, rotate?: vec3) {
         if (pos !== undefined) {
-            this.setPos(pos);
+            this.setPos(pos[0], pos[1], pos[2]);
         }
         if (scale !== undefined) {
-            this.setScale(scale);
+            this.setScale(scale[0], scale[1], scale[2]);
         }
         if (rotate !== undefined) {
-            this.setRotate(rotate);
+            this.setRotate(rotate[0], rotate[1], rotate[2]);
         }
         return this;
     }
@@ -423,21 +444,13 @@ export class Transform {
 export class Mesh {
     vertexArray: number[]
     indexArray: number[]
-    faceColourArray: number[]
     textureCoordArray: number[]
-    constructor(vertexArray: number[] = [], indexArray: number[] = [], faceColourArray: number[] = [], textureCoordArray: number[] = []) {
+    constructor(vertexArray: number[] = [], indexArray: number[] = [], textureCoordArray: number[] = []) {
         this.vertexArray = vertexArray;
         this.indexArray = indexArray;
         this.textureCoordArray = textureCoordArray;
         //console.log("Filling arrays", faceColourArray.length, 4 * indexArray.length / 3,  4 * indexArray.length / 3 - faceColourArray.length)
         let numFaces = indexArray.length / 3;
-        if (faceColourArray.length < 4 * numFaces) {
-            for (let i = 0; i <= 4 * numFaces; i+=3) {
-                let c = [Math.random(), Math.random(), Math.random(), 1.0];
-                faceColourArray = faceColourArray.concat(c, c, c, c);
-            }
-        }
-        this.faceColourArray = faceColourArray;
     }
 
     translate(vec: vec3): Mesh {
@@ -447,7 +460,24 @@ export class Mesh {
             t = vec[i%3];
             newVA.push(v + t)
         })
-        let out = new Mesh(newVA, this.indexArray, this.faceColourArray);
+        let out = new Mesh(newVA, this.indexArray, this.textureCoordArray);
+        return out;
+    }
+
+    scale(dim: vec3, centre?: vec3): Mesh {
+        let newVA: number[] = [];
+        if (centre === undefined) {
+            centre = vec3.fromValues(0,0,0);
+        }
+        let s = 0;
+        let c = 0;
+        this.vertexArray.forEach((v, i) => {
+            // (v - c)s + c
+            s = dim[i%3];
+            c = centre[i%3];
+            newVA.push((v-c)*s + c)
+        })
+        let out = new Mesh(newVA, this.indexArray, this.textureCoordArray);
         return out;
     }
 
@@ -480,17 +510,7 @@ export class Mesh {
             16, 17, 18, 16, 18, 19, // right
             20, 21, 22, 20, 22, 23, // left
           ];
-        let faceColourArray: number[] = [];
-        for (let i = 0; i < 6; i++) {
-            let c = [Math.random(), Math.random(), Math.random(), 1.0]
-            faceColourArray = faceColourArray.concat(c, c, c, c)
-            /*
-            c1 c1 c1 c1     r g b a  r g b a  r g b a  r g b a 
-            c2 c2 c2 c2
-                ...
-            c6 c6 c6 c6
-            */
-        }
+
         let textureCoordArray = [
             // Front
             0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
@@ -506,16 +526,16 @@ export class Mesh {
             0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
         ]
         //console.log("AAA", faceColourArray)
-        let mesh = new Mesh(vertexArray, indexArray, faceColourArray, textureCoordArray);
+        let mesh = new Mesh(vertexArray, indexArray, textureCoordArray);
         return mesh;
     }
 
     static plane() {
         let vertexArray = [
-            -1.2, 0.0, -1.2,
-            1.2, 0.0, -1.2,
-            1.2, 0.0, 1.2,
-            -1.2, 0.0, 1.2
+            -1.0, 0.0, -1.0,
+            1.0, 0.0, -1.0,
+            1.0, 0.0, 1.0,
+            -1.0, 0.0, 1.0
         ]
         let indexArray = [
             0, 1, 2, 0, 2, 3
@@ -524,17 +544,85 @@ export class Mesh {
             0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0
         ]
         let c = [Math.random(), Math.random(), Math.random(), 1.0]
-        let faceColourArray: number[] = Array().concat(c, c, c, c);
-        let mesh = new Mesh(vertexArray, indexArray, faceColourArray, textureCoordArray);
+        let mesh = new Mesh(vertexArray, indexArray, textureCoordArray);
+        return mesh;
+    }
+    static pyramid() {
+        let vertexArray = [
+            // Front face (triangle)
+            -1.0, -1.0,  1.0,   // 0  base left
+            1.0, -1.0,  1.0,   // 1  base right
+            0.0,  1.0,  0.0,   // 2  apex
+
+            // Right face (triangle)
+            1.0, -1.0,  1.0,   // 3
+            1.0, -1.0, -1.0,   // 4
+            0.0,  1.0,  0.0,   // 5
+
+            // Back face (triangle)
+            1.0, -1.0, -1.0,   // 6
+            -1.0, -1.0, -1.0,   // 7
+            0.0,  1.0,  0.0,   // 8
+
+            // Left face (triangle)
+            -1.0, -1.0, -1.0,   // 9
+            -1.0, -1.0,  1.0,   // 10
+            0.0,  1.0,  0.0,   // 11
+
+            // Bottom face (square)
+            -1.0, -1.0,  1.0,   // 12
+            1.0, -1.0,  1.0,   // 13
+            1.0, -1.0, -1.0,   // 14
+            -1.0, -1.0, -1.0,   // 15
+        ];
+
+        let indexArray = [
+            0, 1, 2,        // front
+            3, 4, 5,        // right
+            6, 7, 8,        // back
+            9,10,11,        // left
+            12,13,14,       // bottom triangle 1
+            12,14,15        // bottom triangle 2
+        ];
+
+
+        let textureCoordArray = [
+            // Front
+            0.0, 0.0,
+            1.0, 0.0,
+            0.5, 1.0,
+
+            // Right
+            0.0, 0.0,
+            1.0, 0.0,
+            0.5, 1.0,
+
+            // Back
+            0.0, 0.0,
+            1.0, 0.0,
+            0.5, 1.0,
+
+            // Left
+            0.0, 0.0,
+            1.0, 0.0,
+            0.5, 1.0,
+
+            // Bottom
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+        ];
+
+        let mesh = new Mesh(vertexArray, indexArray, textureCoordArray);
         return mesh;
     }
 
-        static union(m1: Mesh, m2: Mesh): Mesh {
+    static union(m1: Mesh, m2: Mesh): Mesh {
         let vertexArray = m1.vertexArray.concat(m2.vertexArray);
         let indexOffset = m1.vertexArray.length / 3;
         let indexArray = m1.indexArray.concat(m2.indexArray.map(i => i + indexOffset));
-        let faceColourArray = m1.faceColourArray.concat(m2.faceColourArray);
         let textureCoordArray = m1.textureCoordArray.concat(m2.textureCoordArray);
-        return new Mesh(vertexArray, indexArray, faceColourArray, textureCoordArray);
+        return new Mesh(vertexArray, indexArray, textureCoordArray);
     }
 }

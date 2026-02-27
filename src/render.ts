@@ -465,6 +465,7 @@ export class Render {
         // Tell the shader we bound the texture to texture unit 0
         gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
+
         {
             const type = gl.UNSIGNED_SHORT;
             const offset = 0;
