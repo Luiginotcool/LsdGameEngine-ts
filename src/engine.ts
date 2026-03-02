@@ -5,6 +5,7 @@ import { Render } from "./render.js";
 import { Buffers, keyFunctions } from "./types.js";
 import { InitBuffers } from "./buffers.js";
 import { TextureManager } from "./textureManager.js";
+import { Plane } from "./gameObjects/plane.js";
 
 export class Engine{
 
@@ -23,6 +24,8 @@ export class Engine{
 
         */
         Render.gl.clear(Render.gl.COLOR_BUFFER_BIT | Render.gl.DEPTH_BUFFER_BIT);
+        let projectionMatrix = Render.createProjectionMatrix(camera.fov, camera.zFar);
+
         for (let key in scene.gameObjects) {
             let gameObject = scene.gameObjects[key]
             if (!gameObject.hasMesh()) {
@@ -57,7 +60,6 @@ export class Engine{
                 t.pos, t.rotate, t.scale, 
                 t.centre, camera.pos, vec3.fromValues(camera.pitch, camera.heading, 0)
             )
-            let projectionMatrix = Render.createProjectionMatrix(camera.fov);
             let vertexCount = gameObject.mesh!.indexArray.length;
             Render.drawBuffers(
                 Render.programInfo,
@@ -78,7 +80,6 @@ export class Engine{
             // Call drawSkyboxBuffers
             let skyboxPositionBuffer = InitBuffers.initSkyboxPositionBuffer(Render.gl);
             let skyboxTexture = scene.skybox.texture;
-            let projectionMatrix = Render.createProjectionMatrix(camera.fov);
             let viewMatrix = Render.createViewMatrix(vec3.fromValues(0,0,0), vec3.fromValues(camera.pitch, camera.heading, 0));
             Render.drawSkyboxBuffers(
                 Render.skyboxProgramInfo,
@@ -97,17 +98,20 @@ export class Camera {
     pos: vec3
     heading: number;
     pitch: number;
-    fov: number
-    constructor(x: number,y:number,z:number, heading:number, pitch:number, fov:number) {
+    fov: number;
+    zFar: number;
+    constructor(x: number,y:number,z:number, heading:number, pitch:number, fov:number, zFar=500) {
         this.pos = vec3.fromValues(x,y,z);
         this.heading = heading
         this.pitch = pitch;
         this.fov = fov;
+        this.zFar = zFar;
     }
 }
 
 
 export class Scene {
+    [x: string]: any;
     gameObjects: {[key: string]: GameObject}
     skybox: Skybox | null
     constructor() {
@@ -259,7 +263,7 @@ export class GameObject {
             }
     
             if (Input.keys.space) {
-                pos[1] += speed
+                //pos[1] += speed
             }
     
             if (Input.keys.shift) {
@@ -272,13 +276,7 @@ export class GameObject {
 
 }
 
-export class PlaneCollider {
-    type: string
 
-    constructor() {
-        this.type = "PlaneCollider"
-    }
-}
 
 export class BoxCollider {
     pos: vec3;
@@ -291,10 +289,7 @@ export class BoxCollider {
         this.type = "BoxCollider"
     }
 
-    collides(_collider: BoxCollider | PlaneCollider) {
-        if (_collider.type == "PlaneCollider") {
-            let collider = <PlaneCollider>_collider;
-        }
+    collides(_collider: BoxCollider) {
 
         if (_collider.type == "BoxCollider") {
             let collider = <BoxCollider>_collider;
@@ -427,7 +422,11 @@ export class Transform {
         this.rotate = vec3.fromValues(x,y,z);
     }
 
-    set(pos?: vec3, scale?: vec3, rotate?: vec3) {
+    setCentre(x: number, y: number, z: number) {
+        this.centre = vec3.fromValues(x,y,z);
+    }
+
+    set(pos?: vec3, scale?: vec3, rotate?: vec3, centre?: vec3) {
         if (pos !== undefined) {
             this.setPos(pos[0], pos[1], pos[2]);
         }
@@ -436,6 +435,9 @@ export class Transform {
         }
         if (rotate !== undefined) {
             this.setRotate(rotate[0], rotate[1], rotate[2]);
+        }
+        if (centre !== undefined) {
+            this.setCentre(centre[0], centre[1], centre[2])
         }
         return this;
     }

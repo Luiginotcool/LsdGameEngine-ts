@@ -2,6 +2,7 @@ import { Input } from "./input";
 import { Game } from "./game";
 import { Render} from "./render"
 import { DebugText } from "./types";
+import { DownhillPlayer, PlayerState } from "./scenes/downhill";
 
 export class App {
     static canvas: HTMLCanvasElement;
@@ -57,11 +58,23 @@ export class App {
             App.frames++;
             Input.mouseLocked = (document.pointerLockElement === App.canvas);
 
-            let pos = Game.scenes[0].gameObjects.player.transform.pos
+            let scene = Game.scenes[0]
+            let player = scene.gameObjects.player as DownhillPlayer;
+
+            let pos = player.transform.pos
+            let vel = player.body!.vel;
+            let state = player.state;
             let debugString = {
                 "Fps": fps,
                 "mouseX": Input.mouseX,
-                "pos": pos[0] + ", " + pos[1] + ", " + pos[2],
+                "pos": pos[0].toFixed(1) + ", " +
+                 pos[1].toFixed(1) + ", " +
+                 pos[2].toFixed(1),
+                "vel": vel[0].toFixed(1) + ", "+ 
+                vel[1].toFixed(1) + ", " + 
+                vel[2].toFixed(1),
+                "state": PlayerState[state],
+                "calculated y": Game.scenes[0].y
             }
             App.displayDebug(debugString)
     

@@ -49,7 +49,7 @@ export class Game {
         Game.player = scene.gameObjects.player
 
         for (let key in scene.gameObjects) {
-            console.log(key)
+            //console.log(key)
         }
 
         return scene;

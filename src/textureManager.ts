@@ -9,7 +9,7 @@ export class TextureManager {
         return Render.colourTexture(r,g,b);
     }
 
-    static cubeMapTexture(url: string): WebGLTexture {
+    static cubeMapTexture(): WebGLTexture {
         return Render.cubeMapTexture([]) // FINISH
     }
 }

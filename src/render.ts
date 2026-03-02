@@ -366,11 +366,11 @@ export class Render {
         return mv;
     }
 
-    static createProjectionMatrix(fov: number) {
+    static createProjectionMatrix(fov: number, zFar: number) {
         const fieldOfView = (fov * Math.PI) / 180; // in radians
         const aspect = Render.width / Render.height;
         const zNear = 0.1;
-        const zFar = 100.0;
+        //const zFar = 5000.0;
         const projectionMatrix = mat4.create();
 
         // note: glmatrix.js always has the first argument

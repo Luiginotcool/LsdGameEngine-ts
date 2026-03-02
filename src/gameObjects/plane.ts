@@ -1,21 +1,21 @@
 import { vec3 } from "gl-matrix";
 import { Controller, GameObject, Mesh } from "../engine";
-
+import { PlaneCollider } from "../colliders/PlaneCollider";
 
 export class Plane extends GameObject {
+    collider?: PlaneCollider
     constructor(
         id: string,
         pos?: vec3, 
         dim?: vec3, 
         rot?: vec3, 
         centre?: vec3,
-        texture?: string
+        texture?: string,
     ) {
         super(id);
         let mesh = Mesh.plane()
         this.mesh = mesh
-        this.transform.set(pos, dim, rot);
-        if (centre) {this.transform.centre = centre;}
+        this.transform.set(pos, dim, rot, centre);
         if (texture) {
             this.setTexture(texture);
         }
