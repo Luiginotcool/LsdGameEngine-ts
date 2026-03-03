@@ -2,7 +2,9 @@ import { Input } from "./input";
 import { Game } from "./game";
 import { Render} from "./render"
 import { DebugText } from "./types";
-import { DownhillPlayer, PlayerState } from "./scenes/downhill";
+import { Downhill, DownhillPlayer, PlayerState } from "./scenes/downhill";
+import { Plane } from "./gameObjects/plane";
+import { vec2 } from "gl-matrix";
 
 export class App {
     static canvas: HTMLCanvasElement;
@@ -58,8 +60,13 @@ export class App {
             App.frames++;
             Input.mouseLocked = (document.pointerLockElement === App.canvas);
 
-            let scene = Game.scenes[0]
+            let scene = Game.scenes[0] as Downhill;
             let player = scene.gameObjects.player as DownhillPlayer;
+            let plane = scene.gameObjects.plane as Plane;
+            let impact = scene.impact;
+            if (impact == undefined) {
+                impact = [0,0,0]
+            }
 
             let pos = player.transform.pos
             let vel = player.body!.vel;
@@ -74,7 +81,9 @@ export class App {
                 vel[1].toFixed(1) + ", " + 
                 vel[2].toFixed(1),
                 "state": PlayerState[state],
-                "calculated y": Game.scenes[0].y
+                "calculated y": scene.floorY!,
+                "impact": impact.toString(),
+                "t": scene.t!,
             }
             App.displayDebug(debugString)
     

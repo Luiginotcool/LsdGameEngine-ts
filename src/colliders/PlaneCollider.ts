@@ -20,7 +20,7 @@ export class PlaneCollider{
 
         let [nx,ny,nz] = this.normal;
         let [a,b,c] = this.origin;
-        console.log(nx, ny, nz);
+        //console.log(nx, ny, nz);
 
         return b + (nx*(a-x) + nz*(c-z))/ny;
     }
@@ -29,5 +29,18 @@ export class PlaneCollider{
         let [xr,yr,zr] = rotation;
         let n = vec3.fromValues(-Math.sin(zr), Math.cos(xr)*Math.cos(zr), Math.sin(xr)*Math.cos(zr))
         return n;
+    }
+
+    getSpan(): [vec3, vec3] {
+        let [a,b,c] = this.normal;
+        let q = vec3.create();
+        let r = vec3.create();
+        if (c == 0 && -a-b == 0) {
+            q = vec3.fromValues(-b-c, a, a);
+        } else {
+            q = vec3.fromValues(c, c, -a-b);
+        }
+        vec3.cross(r, q, this.normal);
+        return [q, r];
     }
 }

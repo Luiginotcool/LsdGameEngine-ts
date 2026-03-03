@@ -1,5 +1,5 @@
-import { vec3 } from "gl-matrix";
-import { Body, Scene, Skybox } from "../engine";
+import { vec3, mat3 } from "gl-matrix";
+import { Body, Camera, Scene, Skybox } from "../engine";
 import { Plane } from "../gameObjects/plane";
 import { Player } from "../gameObjects/player";
 import { Cube } from "../gameObjects/cube";
@@ -15,12 +15,15 @@ export enum PlayerState {
 }
 
 export class Downhill extends Scene {
+    floorY?: number;
+    impact?: vec3;
+    t?: number;
     init() {
 
         // Plane that goes downhill
         let floorPos = vec3.fromValues(0, 0, 0);
         let floorDim = vec3.fromValues(1000, 1, 1000);
-        let floorRot = vec3.fromValues(-0.4, 0, 0);
+        let floorRot = vec3.fromValues(-0.001, 0, -0.0);
         let floorCentre = vec3.fromValues(0, 0, 10);
         let floor = new Plane("floor", floorPos, floorDim, floorRot, floorCentre);
         let floorNormal = PlaneCollider.normalFromRotation(floorRot);
@@ -74,20 +77,22 @@ export class Downhill extends Scene {
         floor.collider = floor.collider!;
         player.body = player.body!
         player.handleInput(dt);
-        
+        vec3.copy(player.body.pos, player.transform.pos)
         let pos = player.body.pos;
         let vel = player.body.vel;
         let acc = vec3.create();
         let newPos = vec3.create();
         let floorNormal = floor.collider.normal;
         let [nx,ny,nz] = floorNormal;
-        let floorY = floor.collider.getY(pos[0], pos[1])
+        let floorY = floor.collider.getY(pos[0], pos[2])
+        this.floorY = floorY;
 
         let friction = 1;
-        let g = 1/1000;
+        let g = 3;
         let j = 3;
         let grad = vec3.fromValues(-nx/ny, 1, -nz/ny);
         let jumpSpeed = 5;
+        let bounded = false;
 
 
         switch (player.state) {
@@ -101,16 +106,17 @@ export class Downhill extends Scene {
                     break;
                 }
                 player.state = PlayerState.sliding;
-                newPos[1] = floorY;
+                bounded = true;
                 break;
             
             case PlayerState.sliding:
-                vec3.scale(acc, grad, g/friction);
-                newPos[1] = floorY;
+                vec3.scale(acc, grad, -g/friction);
+                bounded = true; 
 
                 if (Input.keys.space) {
                     // jump
                     vec3.scaleAndAdd(vel, vel, floorNormal, jumpSpeed);
+                    vel[1] = jumpSpeed
                     player.state = PlayerState.jumping;
                 }
                 break;
@@ -119,24 +125,56 @@ export class Downhill extends Scene {
                 acc = vec3.fromValues(0, -g, 0);
 
                 if (pos[1] <= floorY) {
-                    newPos[1] = floorY;
+                    bounded = true;
                     player.state = PlayerState.sliding;
                 }
                 break;
                 
             case PlayerState.jumping:
                 acc = vec3.fromValues(0, -g/j, 0);
+                let [q, r] = floor.collider.getSpan();
+                let [qx,qy,qz] = q;
+                let [rx,ry,rz] = r;
+                let [vx,vy,vz] = vel;
+                let [px,py,pz] = pos;
+                
+                let D = vec3.create();
+                let coefs = vec3.create();
+                vec3.sub(D, pos, floor.collider.origin);
+                let M = mat3.fromValues(
+                    vx, qx, rx,
+                    vy, qy, ry,
+                    vz, qz, rz
+                )
+                console.log(M.toLocaleString())
+                let Minv = vec3.create();
+                vec3.inverse(Minv, M);
+                console.log(M.toString())
 
-                if (vel[1] < 0) {
+                vec3.transformMat3(coefs, D, M);
+                let t = -coefs[0]
+                
+                if (t > 0 || pos[1] < floorY) {
+                    // falling
                     player.state = PlayerState.falling;
+                }
+                this.t = t;
+                this.impact = vec3.create();
+                vec3.scaleAndAdd(this.impact, pos, vel, t)
+                
+                
+                if (vel[1] < 0) {
                 }
                 break;
         }
 
-        vec3.scaleAndAdd(vel, vel, acc, dt);
-        vec3.scaleAndAdd(pos, pos, vel, dt);
-
-        player.transform.pos = pos;
+        vec3.scaleAndAdd(vel, vel, acc, dt/1000);
+        vec3.scaleAndAdd(pos, pos, vel, dt/1000);
+        if (bounded) {
+            pos[1] = floorY
+        }
+        player.transform.pos = vec3.fromValues(pos[0], pos[1], pos[2])
+        player.camera!.pos = vec3.fromValues(pos[0], pos[1]+2, pos[2])
 
         /*
 
@@ -251,12 +289,78 @@ export class Downhill extends Scene {
 export class DownhillPlayer extends Player {
     state: PlayerState
     noclip: Boolean
+    body: Body
 
     constructor(pos: vec3) {
         super("player", pos)
         this.body = new Body(pos);
         this.state = PlayerState.none
         this.noclip = false;
+    }
+
+    handleInput(dt: number): void {
+        let sensitivity = 0.001;
+        let dv = 0.01 * dt;
+        let cam = this.camera;
+        let pos = this.transform.pos;
+        let vel = this.body.vel;
+
+        if (cam == null || pos == null) {
+            return
+        }
+        
+        // Update camera rotation based on mouse movement
+        if (Input.mouseLocked) {
+            if (true) {
+                let dx = Input.mouseDx;
+                let dy = Input.mouseDy;
+
+                cam.heading -= dx * sensitivity;
+                cam.pitch -= dy * sensitivity;
+
+
+                //cam.heading += Input.mouseX * sensitivity;
+                //cam.pitch -= Input.mouseY * sensitivity;
+                if (Math.abs(cam.pitch) > Math.PI/2) {
+                    cam.pitch = Math.sign(cam.pitch) * Math.PI/2;
+                }
+                Input.mouseDx = 0;
+                Input.mouseDy = 0;
+            } else {    
+                //Input.mouseX = 0;
+            }
+        }
+
+        
+        // Calculate forward direction
+        let vx = dv * Math.sin(cam.heading);
+        let vz = dv * Math.cos(cam.heading);
+        if (Input.keys.down) {
+            vel[0] += vx
+            vel[2] += vz;
+        }
+        if (Input.keys.up) {
+            vel[0] -= vx;
+            vel[2] -= vz;
+        }
+        if (Input.keys.right) {
+            vel[0] += vz;
+            vel[2] -= vx;
+        }
+        if (Input.keys.left) {
+            vel[0] -= vz;
+            vel[2] += vx;
+        }
+
+        if (Input.keys.space) {
+            //pos[1] += speed
+        }
+
+        if (Input.keys.shift) {
+            //vel[1] -= speed;
+        }
+        this.body.vel = vel;
+        this.camera!.pos = pos;
     }
 
     update(dt: number): void {

@@ -29,7 +29,7 @@ export class Engine{
         for (let key in scene.gameObjects) {
             let gameObject = scene.gameObjects[key]
             if (!gameObject.hasMesh()) {
-                console.log(key, " skipped")
+                //console.log(key, " skipped")
                 continue;
             } 
             //console.log(key)
